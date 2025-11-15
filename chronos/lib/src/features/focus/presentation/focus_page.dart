@@ -1,32 +1,42 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
+import '../../../application/focus_session_controller.dart';
+import '../../../application/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/local/app_database.dart';
 import '../../../shared/widgets/section_card.dart';
-import '../../dashboard/data/dashboard_models.dart';
+import '../../dashboard/presentation/dashboard_metrics.dart';
 
-class FocusPage extends StatelessWidget {
+class FocusPage extends ConsumerWidget {
   const FocusPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tasksAsync = ref.watch(tasksStreamProvider);
+    final sessionsAsync = ref.watch(focusSessionsStreamProvider);
     return ListView(
       padding: const EdgeInsets.all(24),
-      children: const [
+      children: [
         SectionCard(
           title: 'Focus Session',
           subtitle: 'Interactive time clock with zen mode',
-          child: _FocusTimer(),
+          child: _FocusTimer(
+            tasksAsync: tasksAsync,
+            sessionsAsync: sessionsAsync,
+          ),
         ),
-        SizedBox(height: 24),
+        const SizedBox(height: 24),
         SectionCard(
           title: 'Session History',
           subtitle: 'Log of today’s focus blocks',
-          child: _SessionHistory(),
+          child: _SessionHistory(sessionsAsync: sessionsAsync),
         ),
-        SizedBox(height: 24),
-        SectionCard(
+        const SizedBox(height: 24),
+        const SectionCard(
           title: 'Ambient Options',
           subtitle: 'Enhance focus with background cues',
           child: _AmbientOptions(),
@@ -36,18 +46,49 @@ class FocusPage extends StatelessWidget {
   }
 }
 
-class _FocusTimer extends StatelessWidget {
-  const _FocusTimer();
+class _FocusTimer extends ConsumerStatefulWidget {
+  const _FocusTimer({required this.tasksAsync, required this.sessionsAsync});
+
+  final AsyncValue<List<Task>> tasksAsync;
+  final AsyncValue<List<FocusSession>> sessionsAsync;
+
+  @override
+  ConsumerState<_FocusTimer> createState() => _FocusTimerState();
+}
+
+class _FocusTimerState extends ConsumerState<_FocusTimer> {
+  String? _selectedTaskId;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final progress = 0.65;
+    final sessionsAsync = widget.sessionsAsync;
+    final sessions = sessionsAsync.asData?.value ?? const <FocusSession>[];
+    final sorted = [...sessions]..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+    final latestSession = sorted.isNotEmpty ? sorted.first : null;
+    final activeSessionState = ref.watch(focusSessionControllerProvider);
+    final activeSession = activeSessionState.value;
+    final referenceSession = activeSession ?? latestSession;
+    final progress = sessionProgress(referenceSession);
+    final displayDuration = sessionDurationDisplay(referenceSession);
+    final displayLabel = sessionLabel(referenceSession);
+    final targetMinutes = sessionTargetMinutes(referenceSession);
+    final controller = ref.read(focusSessionControllerProvider.notifier);
+    final isWide = MediaQuery.of(context).size.width > 900;
+    final isProcessing = activeSessionState.isLoading;
+
+    if (sessionsAsync.isLoading && activeSessionState.isLoading) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWide = constraints.maxWidth > 600;
+        final horizontal = constraints.maxWidth > 600;
         return Flex(
-          direction: isWide ? Axis.horizontal : Axis.vertical,
+          direction: horizontal ? Axis.horizontal : Axis.vertical,
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -60,15 +101,18 @@ class _FocusTimer extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Deep Work', style: theme.textTheme.titleMedium),
+                      Text(displayLabel, style: theme.textTheme.titleMedium),
                       const SizedBox(height: 6),
                       Text(
-                        '18:24',
+                        displayDuration,
                         style: theme.textTheme.displaySmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const Text('of 30 mins'),
+                      Text(
+                        targetMinutes != null ? 'of $targetMinutes mins' : 'No target',
+                        style: theme.textTheme.labelLarge,
+                      ),
                     ],
                   ),
                 ),
@@ -80,33 +124,51 @@ class _FocusTimer extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   FilledButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    label: const Text('Start Focus Session'),
+                    onPressed: isProcessing
+                        ? null
+                        : () {
+                            if (activeSession != null) {
+                              controller.pauseSession();
+                            } else {
+                              controller.startSession(taskId: _selectedTaskId);
+                            }
+                          },
+                    icon: Icon(activeSession != null ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                    label: Text(activeSession != null ? 'Pause Session' : 'Start Focus Session'),
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: () {},
                     icon: const Icon(Icons.center_focus_strong_rounded),
-                    label: const Text('Enter Zen Mode'),
+                    label: Text(isWide ? 'Enter Zen Mode' : 'Zen Mode'),
                   ),
                   const SizedBox(height: 16),
                   Text('Attach to task', style: theme.textTheme.labelLarge),
                   const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.task_alt_rounded),
-                    ),
-                    items: mockTimelineTasks
-                        .map(
-                          (task) => DropdownMenuItem(
-                            value: task.id,
-                            child: Text(task.title),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (_) {},
-                    hint: const Text('Link current focus to a task'),
+                  widget.tasksAsync.when(
+                    data: (tasks) {
+                      if (tasks.isEmpty) {
+                        return const Text('No tasks available to link.');
+                      }
+                      return DropdownButtonFormField<String>(
+                        value: _selectedTaskId,
+                        decoration: const InputDecoration(
+                          prefixIcon: Icon(Icons.task_alt_rounded),
+                        ),
+                        items: tasks
+                            .map(
+                              (task) => DropdownMenuItem(
+                                value: task.id,
+                                child: Text(task.title),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) => setState(() => _selectedTaskId = value),
+                        hint: const Text('Link current focus to a task'),
+                      );
+                    },
+                    loading: () => const LinearProgressIndicator(),
+                    error: (error, _) => Text('Unable to load tasks: $error'),
                   ),
                 ],
               ),
@@ -156,46 +218,77 @@ class _FocusClockPainter extends CustomPainter {
 }
 
 class _SessionHistory extends StatelessWidget {
-  const _SessionHistory();
+  const _SessionHistory({required this.sessionsAsync});
+
+  final AsyncValue<List<FocusSession>> sessionsAsync;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      children: mockFocusSummary.map((summary) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: theme.colorScheme.surfaceVariant.withOpacity(.3),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.timer_rounded, color: ChronosTheme.focusAccent),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      summary.label,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Text('Session complete', style: theme.textTheme.labelSmall),
-                  ],
-                ),
-              ),
-              Text(
-                '${summary.minutes} mins',
-                style: theme.textTheme.titleMedium,
-              ),
-            ],
-          ),
+    return sessionsAsync.when(
+      data: (sessions) {
+        if (sessions.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text('No focus sessions logged yet.'),
+          );
+        }
+        final sorted = [...sessions]..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+        return Column(
+          children: sorted
+              .map((session) => _SessionHistoryTile(session: session, theme: theme))
+              .toList(),
         );
-      }).toList(),
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, _) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text('Unable to load sessions: $error'),
+      ),
+    );
+  }
+}
+
+class _SessionHistoryTile extends StatelessWidget {
+  const _SessionHistoryTile({required this.session, required this.theme});
+
+  final FocusSession session;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = session.endedAt == null;
+    final duration = sessionDisplayMinutes(session);
+    final timestamp = DateFormat.yMMMd().add_jm().format(session.startedAt);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(.3),
+      ),
+      child: Row(
+        children: [
+          Icon(isActive ? Icons.play_circle_fill : Icons.timer_rounded, color: ChronosTheme.focusAccent),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  sessionLabel(session),
+                  style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                Text(timestamp, style: theme.textTheme.labelSmall),
+              ],
+            ),
+          ),
+          Text('$duration mins', style: theme.textTheme.titleMedium),
+        ],
+      ),
     );
   }
 }
@@ -224,7 +317,7 @@ class _AmbientOptionsState extends State<_AmbientOptions> {
         ),
         if (_ambientSounds)
           DropdownButtonFormField<String>(
-            value: _selectedSound,
+            initialValue: _selectedSound,
             items: const [
               DropdownMenuItem(value: 'Rain', child: Text('Rain')),
               DropdownMenuItem(value: 'Cafe', child: Text('Cafe murmurs')),

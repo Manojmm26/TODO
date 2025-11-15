@@ -36,6 +36,8 @@ class FocusSessionRepository {
 
   Stream<List<FocusSession>> watchSessions() => _dao.watchSessions();
   Future<void> logSession(FocusSessionsCompanion session) => _dao.logSession(session);
+  Future<FocusSession?> activeSession() => _dao.activeSession();
+  Future<void> closeSession(String id, DateTime endedAt) => _dao.closeSession(id, endedAt);
 }
 
 class TagRepository {

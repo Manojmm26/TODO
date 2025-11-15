@@ -1,17 +1,27 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import 'plan_task_dialog.dart';
+
+import '../../../application/focus_session_controller.dart';
+import '../../../application/providers.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/local/app_database.dart';
 import '../../../shared/widgets/section_card.dart';
 import '../data/dashboard_models.dart';
+import 'dashboard_metrics.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tasksAsync = ref.watch(tasksStreamProvider);
+    final goalsAsync = ref.watch(goalsStreamProvider);
+    final sessionsAsync = ref.watch(focusSessionsStreamProvider);
     final theme = Theme.of(context);
     final width = MediaQuery.of(context).size.width;
     final bool isWide = width > 1200;
@@ -34,19 +44,22 @@ class DashboardPage extends StatelessWidget {
             children: [
               SizedBox(
                 width: isWide ? width * .55 : width - 48,
-                child: const _TimelineOverview(),
+                child: _TimelineOverview(tasksAsync: tasksAsync),
               ),
               SizedBox(
                 width: isWide ? width * .35 - 48 : width - 48,
-                child: const _GoalsProgress(),
+                child: _GoalsProgress(goalsAsync: goalsAsync),
               ),
               SizedBox(
                 width: isWide ? width * .4 : width - 48,
-                child: const _FocusClockCard(),
+                child: _FocusClockCard(sessionsAsync: sessionsAsync),
               ),
               SizedBox(
                 width: isWide ? width * .5 - 48 : width - 48,
-                child: const _DailyDigestCard(),
+                child: _DailyDigestCard(
+                  tasksAsync: tasksAsync,
+                  sessionsAsync: sessionsAsync,
+                ),
               ),
             ],
           ),
@@ -57,25 +70,49 @@ class DashboardPage extends StatelessWidget {
 }
 
 class _TimelineOverview extends StatelessWidget {
-  const _TimelineOverview();
+  const _TimelineOverview({required this.tasksAsync});
+
+  final AsyncValue<List<Task>> tasksAsync;
 
   @override
   Widget build(BuildContext context) {
-    return SectionCard(
-      title: 'Timeline Buckets',
-      subtitle: 'Upcoming, planned, and someday items',
-      trailing: FilledButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.add_task_rounded),
-        label: const Text('Plan Task'),
+    return tasksAsync.when(
+      data: (tasks) {
+        final grouped = groupTasksByBucket(tasks);
+        return SectionCard(
+          title: 'Timeline Buckets',
+          subtitle: 'Upcoming, planned, and someday items',
+          trailing: FilledButton.icon(
+            onPressed: () => showDialog(
+              context: context,
+              builder: (context) => const PlanTaskDialog(),
+            ),
+            icon: const Icon(Icons.add_task_rounded),
+            label: const Text('Plan Task'),
+          ),
+          child: Column(
+            children: TimelineBucket.values
+                .map((bucket) => _BucketGroup(
+                      bucket: bucket,
+                      tasks: grouped[bucket] ?? const [],
+                    ))
+                .toList(),
+          ),
+        );
+      },
+      loading: () => const Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(child: CircularProgressIndicator()),
+        ),
       ),
-      child: Column(
-        children: TimelineBucket.values.map((bucket) {
-          final tasks = mockTimelineTasks
-              .where((task) => task.bucket == bucket)
-              .toList();
-          return _BucketGroup(bucket: bucket, tasks: tasks);
-        }).toList(),
+      error: (error, stackTrace) => Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('Unable to load tasks: $error'),
+        ),
       ),
     );
   }
@@ -85,7 +122,7 @@ class _BucketGroup extends StatelessWidget {
   const _BucketGroup({required this.bucket, required this.tasks});
 
   final TimelineBucket bucket;
-  final List<TimelineTask> tasks;
+  final List<Task> tasks;
 
   @override
   Widget build(BuildContext context) {
@@ -117,7 +154,16 @@ class _BucketGroup extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          ...tasks.map((task) => _TimelineTile(task: task)),
+          if (tasks.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'No tasks in this bucket yet',
+                style: theme.textTheme.labelMedium,
+              ),
+            )
+          else
+            ...tasks.map((task) => _TimelineTile(task: task, bucket: bucket)),
         ],
       ),
     );
@@ -125,21 +171,26 @@ class _BucketGroup extends StatelessWidget {
 }
 
 class _TimelineTile extends StatelessWidget {
-  const _TimelineTile({required this.task});
+  const _TimelineTile({required this.task, required this.bucket});
 
-  final TimelineTask task;
+  final Task task;
+  final TimelineBucket bucket;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dueText = DateFormat('MMM d · h:mm a').format(task.due);
-    final bucketColor = task.bucket.color;
+    final dueText = task.dueDate != null
+        ? DateFormat('MMM d · h:mm a').format(task.dueDate!)
+        : 'No due date';
+    final bucketColor = bucket.color;
+    final progress = taskProgress(task);
+    final priority = priorityFromInt(task.priority);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: theme.colorScheme.surfaceVariant.withOpacity(.4),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(.4),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,18 +205,29 @@ class _TimelineTile extends StatelessWidget {
                   ),
                 ),
               ),
-              _PriorityChip(priority: task.priority),
+              _PriorityChip(priority: priority),
             ],
           ),
-          if (task.project != null)
+          if (task.projectId != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(task.project!, style: theme.textTheme.labelMedium),
+              child: Text(
+                'Project: ${task.projectId}',
+                style: theme.textTheme.labelMedium,
+              ),
+            )
+          else if (task.goalId != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Goal: ${task.goalId}',
+                style: theme.textTheme.labelMedium,
+              ),
             ),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: LinearProgressIndicator(
-              value: task.progress,
+              value: progress,
               minHeight: 6,
               backgroundColor: theme.colorScheme.surface,
               valueColor: AlwaysStoppedAnimation(bucketColor),
@@ -218,19 +280,46 @@ class _PriorityChip extends StatelessWidget {
 }
 
 class _GoalsProgress extends StatelessWidget {
-  const _GoalsProgress();
+  const _GoalsProgress({required this.goalsAsync});
+
+  final AsyncValue<List<Goal>> goalsAsync;
 
   @override
   Widget build(BuildContext context) {
-    return SectionCard(
-      title: 'Goal Progress',
-      subtitle: 'Visual tracker for major goals',
-      trailing: IconButton(
-        onPressed: () {},
-        icon: const Icon(Icons.analytics_rounded),
+    return goalsAsync.when(
+      data: (goals) {
+        return SectionCard(
+          title: 'Goal Progress',
+          subtitle: 'Visual tracker for major goals',
+          trailing: IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.analytics_rounded),
+          ),
+          child: goals.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text('No goals yet. Create one to start tracking progress.'),
+                )
+              : Column(
+                  children: goals
+                      .map((goal) => _GoalTile(goal: goal))
+                      .toList(),
+                ),
+        );
+      },
+      loading: () => const Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(child: CircularProgressIndicator()),
+        ),
       ),
-      child: Column(
-        children: mockGoals.map((goal) => _GoalTile(goal: goal)).toList(),
+      error: (error, stackTrace) => Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('Unable to load goals: $error'),
+        ),
       ),
     );
   }
@@ -239,17 +328,19 @@ class _GoalsProgress extends StatelessWidget {
 class _GoalTile extends StatelessWidget {
   const _GoalTile({required this.goal});
 
-  final GoalProgress goal;
+  final Goal goal;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = Color(goal.colorHex);
+    final progress = ((goal.progressOverride ?? 0.0).clamp(0.0, 1.0)).toDouble();
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        color: goal.color.withOpacity(.12),
+        color: color.withOpacity(.12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -265,7 +356,7 @@ class _GoalTile extends StatelessWidget {
                 ),
               ),
               Text(
-                '${(goal.progress * 100).round()}%',
+                '${(progress * 100).round()}%',
                 style: theme.textTheme.titleMedium,
               ),
             ],
@@ -274,15 +365,17 @@ class _GoalTile extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
-              value: goal.progress,
+              value: progress,
               minHeight: 8,
               backgroundColor: Colors.white.withOpacity(.4),
-              valueColor: AlwaysStoppedAnimation(goal.color),
+              valueColor: AlwaysStoppedAnimation(color),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Due ${DateFormat.MMMd().format(goal.deadline)}',
+            goal.targetDate != null
+                ? 'Due ${DateFormat.MMMd().format(goal.targetDate!)}'
+                : 'No deadline',
             style: theme.textTheme.labelSmall,
           ),
         ],
@@ -291,66 +384,109 @@ class _GoalTile extends StatelessWidget {
   }
 }
 
-class _FocusClockCard extends StatelessWidget {
-  const _FocusClockCard();
+class _FocusClockCard extends ConsumerWidget {
+  const _FocusClockCard({required this.sessionsAsync});
+
+  final AsyncValue<List<FocusSession>> sessionsAsync;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final progress = 0.65;
-    return SectionCard(
-      title: 'Time Clock',
-      subtitle: 'Current focus session',
-      trailing: OutlinedButton.icon(
-        onPressed: () {},
-        icon: const Icon(Icons.more_horiz),
-        label: const Text('History'),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: SizedBox(
-              height: 200,
-              child: CustomPaint(
-                painter: _FocusClockPainter(progress: progress),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('Deep Work', style: theme.textTheme.titleMedium),
-                      const SizedBox(height: 6),
-                      Text(
-                        '18:24',
-                        style: theme.textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+    return sessionsAsync.when(
+      data: (sessions) {
+        final sorted = [...sessions]
+          ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+        final activeSession = findActiveSession(sorted);
+        final latestSession = sorted.isNotEmpty ? sorted.first : null;
+        final referenceSession = activeSession ?? latestSession;
+        final progress = sessionProgress(referenceSession);
+        final displayDuration = sessionDurationDisplay(referenceSession);
+        final displayLabel = sessionLabel(referenceSession);
+        final targetMinutes = sessionTargetMinutes(referenceSession);
+        final recentSessions = sorted.take(3).toList();
+        final focusController = ref.read(focusSessionControllerProvider.notifier);
+
+        return SectionCard(
+          title: 'Time Clock',
+          subtitle: activeSession != null ? 'In focus now' : 'Current focus session',
+          trailing: OutlinedButton.icon(
+            onPressed: () {},
+            icon: const Icon(Icons.more_horiz),
+            label: const Text('History'),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 200,
+                  child: CustomPaint(
+                    painter: _FocusClockPainter(progress: progress),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(displayLabel, style: theme.textTheme.titleMedium),
+                          const SizedBox(height: 6),
+                          Text(
+                            displayDuration,
+                            style: theme.textTheme.displaySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            targetMinutes != null ? 'of $targetMinutes mins' : 'No target',
+                            style: theme.textTheme.labelMedium,
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text('of 30 mins', style: theme.textTheme.labelMedium),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 24),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                FilledButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('Start Session'),
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: () {
+                        if (activeSession != null) {
+                          focusController.pauseSession();
+                        } else {
+                          focusController.startSession();
+                        }
+                      },
+                      icon: Icon(activeSession != null ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                      label: Text(activeSession != null ? 'Pause Session' : 'Start Session'),
+                    ),
+                    const SizedBox(height: 16),
+                    if (recentSessions.isEmpty)
+                      Text('No focus sessions logged yet.', style: theme.textTheme.bodySmall)
+                    else
+                      ...recentSessions.map(
+                        (session) => _FocusSummaryTile(session: session),
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                ...mockFocusSummary.map(
-                  (session) => _FocusSummaryTile(summary: session),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        );
+      },
+      loading: () => const Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      error: (error, stackTrace) => Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('Unable to load focus sessions: $error'),
+        ),
       ),
     );
   }
@@ -395,19 +531,25 @@ class _FocusClockPainter extends CustomPainter {
 }
 
 class _FocusSummaryTile extends StatelessWidget {
-  const _FocusSummaryTile({required this.summary});
+  const _FocusSummaryTile({required this.session});
 
-  final FocusSessionSummary summary;
+  final FocusSession session;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isActive = session.endedAt == null;
+    final durationMinutes = sessionDisplayMinutes(session);
+    final label = session.notes?.isNotEmpty == true
+        ? session.notes!
+        : (isActive ? 'Active session' : 'Focus session');
+    final timestamp = DateFormat.MMMd().add_jm().format(session.startedAt);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
-        color: theme.colorScheme.surfaceVariant.withOpacity(.4),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(.4),
       ),
       child: Row(
         children: [
@@ -415,13 +557,13 @@ class _FocusSummaryTile extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              summary.label,
+              '$label • $timestamp',
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
           ),
-          Text('${summary.minutes} mins', style: theme.textTheme.labelMedium),
+          Text('${durationMinutes} mins', style: theme.textTheme.labelMedium),
         ],
       ),
     );
@@ -429,10 +571,47 @@ class _FocusSummaryTile extends StatelessWidget {
 }
 
 class _DailyDigestCard extends StatelessWidget {
-  const _DailyDigestCard();
+  const _DailyDigestCard({
+    required this.tasksAsync,
+    required this.sessionsAsync,
+  });
+
+  final AsyncValue<List<Task>> tasksAsync;
+  final AsyncValue<List<FocusSession>> sessionsAsync;
 
   @override
   Widget build(BuildContext context) {
+    final isLoading = tasksAsync.isLoading || sessionsAsync.isLoading;
+    if (isLoading) {
+      return const SectionCard(
+        title: 'Daily Digest',
+        subtitle: 'Snapshot of today & weekly goals',
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    if (tasksAsync.hasError || sessionsAsync.hasError) {
+      final error = tasksAsync.error ?? sessionsAsync.error;
+      return SectionCard(
+        title: 'Daily Digest',
+        subtitle: 'Snapshot of today & weekly goals',
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('Unable to load digest: $error'),
+        ),
+      );
+    }
+
+    final tasks = tasksAsync.value ?? const [];
+    final sessions = sessionsAsync.value ?? const [];
+    final completedTasks = tasks.where(isTaskCompleted).length;
+    final focusMinutesTodayValue = focusMinutesToday(sessions);
+    final weeklyProgressPercent = weeklyProgress(tasks) * 100;
+    final upcomingDeadlinesCount = upcomingDeadlines(tasks);
+
     return SectionCard(
       title: 'Daily Digest',
       subtitle: 'Snapshot of today & weekly goals',
@@ -441,8 +620,8 @@ class _DailyDigestCard extends StatelessWidget {
           Expanded(
             child: _DigestMetric(
               label: 'Completed Tasks',
-              value: mockDigest.completedTasks.toString(),
-              trend: '+2 vs yesterday',
+              value: completedTasks.toString(),
+              trend: '$upcomingDeadlinesCount deadlines soon',
               icon: Icons.check_circle_rounded,
             ),
           ),
@@ -450,8 +629,8 @@ class _DailyDigestCard extends StatelessWidget {
           Expanded(
             child: _DigestMetric(
               label: 'Focus Minutes',
-              value: '${mockDigest.totalFocusMinutes}',
-              trend: 'Pomodoro streak 3',
+              value: '$focusMinutesTodayValue',
+              trend: 'Sessions today: ${sessionsTodayCount(sessions)}',
               icon: Icons.timelapse_rounded,
             ),
           ),
@@ -459,8 +638,8 @@ class _DailyDigestCard extends StatelessWidget {
           Expanded(
             child: _DigestMetric(
               label: 'Weekly Progress',
-              value: '${(mockDigest.weeklyGoalCompletion * 100).round()}%',
-              trend: '${mockDigest.upcomingDeadlines} deadlines soon',
+              value: '${weeklyProgressPercent.round()}%',
+              trend: '${tasks.length} tasks tracked',
               icon: Icons.flag_circle_rounded,
             ),
           ),
@@ -490,7 +669,7 @@ class _DigestMetric extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        color: theme.colorScheme.surfaceVariant.withOpacity(.35),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(.35),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

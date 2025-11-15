@@ -1,14 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../application/providers.dart';
+import '../../../application/quick_add_controller.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../data/local/app_database.dart';
 import '../../../shared/widgets/section_card.dart';
-import '../../dashboard/data/dashboard_models.dart';
+import '../../dashboard/presentation/dashboard_metrics.dart';
 
-class GoalsPage extends StatelessWidget {
+class GoalsPage extends ConsumerWidget {
   const GoalsPage({super.key});
 
+  Future<void> _showNewGoalDialog(BuildContext context) {
+    return showDialog(
+      context: context,
+      builder: (_) => const _NewGoalDialog(),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final goalsAsync = ref.watch(goalsStreamProvider);
+    final tasksAsync = ref.watch(tasksStreamProvider);
+    final cachedGoals = goalsAsync.maybeWhen(data: (goals) => goals, orElse: () => const <Goal>[]);
+    final cachedTasks = tasksAsync.maybeWhen(data: (tasks) => tasks, orElse: () => const <Task>[]);
+    final tasksByGoal = _tasksGroupedByGoal(cachedTasks);
+    final goalLookup = {for (final goal in cachedGoals) goal.id: goal};
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
@@ -16,30 +34,83 @@ class GoalsPage extends StatelessWidget {
           title: 'Active Goals',
           subtitle: 'Track milestones & completion',
           trailing: FilledButton.icon(
-            onPressed: () {},
+            onPressed: () => _showNewGoalDialog(context),
             icon: const Icon(Icons.add_rounded),
             label: const Text('New Goal'),
           ),
-          child: Column(
-            children: mockGoals
-                .map((goal) => _GoalProgressTile(goal: goal))
-                .toList(),
+          child: goalsAsync.when(
+            data: (goals) {
+              if (goals.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text('No goals yet — create one to start tracking progress.'),
+                );
+              }
+              return Column(
+                children: goals
+                    .map(
+                      (goal) => _GoalProgressTile(
+                        goal: goal,
+                        linkedTasks: tasksByGoal[goal.id] ?? const <Task>[],
+                      ),
+                    )
+                    .toList(),
+              );
+            },
+            loading: () => const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, _) => Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('Unable to load goals: $error'),
+            ),
           ),
         ),
         const SizedBox(height: 24),
         SectionCard(
           title: 'Weekly Milestones',
-          subtitle: 'Plan the steps that feed your goals',
-          child: Wrap(
-            spacing: 16,
-            runSpacing: 16,
-            children: List.generate(
-              4,
-              (index) => _MilestoneCard(
-                label: 'Milestone ${index + 1}',
-                description: 'Outline actionable checkpoint for key projects',
-                due: DateTime.now().add(Duration(days: index * 2 + 1)),
-              ),
+          subtitle: 'Highlight task checkpoints linked to goals',
+          child: tasksAsync.when(
+            data: (tasks) {
+              final milestoneTasks = tasks.where((task) => task.goalId != null).take(4).toList();
+              if (milestoneTasks.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text('No goal-linked tasks yet. Create tasks and associate them with goals.'),
+                );
+              }
+              return Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: milestoneTasks
+                    .map(
+                      (task) {
+                        final goal = task.goalId != null ? goalLookup[task.goalId!] : null;
+                        final siblings = task.goalId != null ? tasksByGoal[task.goalId!] ?? const <Task>[] : const <Task>[];
+                        final completedSiblings = siblings.where(isTaskCompleted).length;
+                        return _MilestoneCard(
+                          label: task.title,
+                          description: task.description ?? 'No description provided',
+                          due: task.dueDate,
+                          progress: taskProgress(task),
+                          goalTitle: goal?.title,
+                          goalDue: goal?.targetDate,
+                          linkedTaskCount: siblings.length,
+                          completedLinkedTasks: completedSiblings,
+                        );
+                      },
+                    )
+                    .toList(),
+              );
+            },
+            loading: () => const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (error, _) => Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text('Unable to load milestones: $error'),
             ),
           ),
         ),
@@ -49,20 +120,31 @@ class GoalsPage extends StatelessWidget {
 }
 
 class _GoalProgressTile extends StatelessWidget {
-  const _GoalProgressTile({required this.goal});
+  const _GoalProgressTile({required this.goal, required this.linkedTasks});
 
-  final GoalProgress goal;
+  final Goal goal;
+  final List<Task> linkedTasks;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = Color(goal.colorHex);
+    final progress = ((goal.progressOverride ?? 0.0).clamp(0.0, 1.0)).toDouble();
+    final totalLinked = linkedTasks.length;
+    final completedLinked = linkedTasks.where(isTaskCompleted).length;
+    final activeLinked = totalLinked - completedLinked;
+    final dueDate = goal.targetDate;
+    final now = DateTime.now();
+    final isOverdue = dueDate != null && dueDate.isBefore(now);
+    final isDueSoon = dueDate != null && !isOverdue && dueDate.difference(now).inDays <= 7;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
-          colors: [goal.color.withOpacity(.15), goal.color.withOpacity(.05)],
+          colors: [color.withOpacity(.15), color.withOpacity(.05)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -83,14 +165,20 @@ class _GoalProgressTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Due ${DateFormat.MMMd().format(goal.deadline)}',
-                      style: theme.textTheme.labelSmall,
+                      dueDate != null ? 'Due ${DateFormat.MMMd().format(dueDate)}' : 'No deadline',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: isOverdue
+                            ? theme.colorScheme.error
+                            : isDueSoon
+                                ? theme.colorScheme.secondary
+                                : null,
+                      ),
                     ),
                   ],
                 ),
               ),
               Text(
-                '${(goal.progress * 100).round()}%',
+                '${(progress * 100).round()}%',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -101,27 +189,33 @@ class _GoalProgressTile extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: LinearProgressIndicator(
-              value: goal.progress,
+              value: progress,
               minHeight: 10,
               backgroundColor: Colors.white.withOpacity(.4),
-              valueColor: AlwaysStoppedAnimation(goal.color),
+              valueColor: AlwaysStoppedAnimation(color),
             ),
           ),
           const SizedBox(height: 12),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Icon(Icons.flag_rounded, color: goal.color),
-              const SizedBox(width: 8),
-              Text(
-                'Next milestone: Storyboarding',
-                style: theme.textTheme.labelMedium,
+              _MetaPill(
+                icon: Icons.check_circle_outline,
+                label: totalLinked == 0
+                    ? 'No linked tasks yet'
+                    : '$completedLinked of $totalLinked tasks complete',
               ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.edit_rounded),
-                label: const Text('Adjust'),
-              ),
+              if (activeLinked > 0)
+                _MetaPill(
+                  icon: Icons.pending_actions_rounded,
+                  label: '$activeLinked active ${(activeLinked == 1) ? 'task' : 'tasks'}',
+                ),
+              if (goal.description?.isNotEmpty == true)
+                _MetaPill(
+                  icon: Icons.notes_rounded,
+                  label: goal.description!,
+                ),
             ],
           ),
         ],
@@ -135,21 +229,35 @@ class _MilestoneCard extends StatelessWidget {
     required this.label,
     required this.description,
     required this.due,
+    required this.progress,
+    this.goalTitle,
+    this.goalDue,
+    this.linkedTaskCount = 0,
+    this.completedLinkedTasks = 0,
   });
 
   final String label;
   final String description;
-  final DateTime due;
+  final DateTime? due;
+  final double progress;
+  final String? goalTitle;
+  final DateTime? goalDue;
+  final int linkedTaskCount;
+  final int completedLinkedTasks;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final goalDeadlineBadge = goalDue != null
+        ? DateFormat.MMMd().format(goalDue!)
+        : null;
+    final goalDeadlineOverdue = goalDue != null && goalDue!.isBefore(DateTime.now());
     return Container(
       width: 260,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        color: theme.colorScheme.surfaceVariant.withOpacity(.35),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(.35),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,14 +269,50 @@ class _MilestoneCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(description, style: theme.textTheme.bodySmall),
+          Text(
+            description,
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 6,
+              backgroundColor: theme.colorScheme.surface,
+              valueColor: const AlwaysStoppedAnimation(ChronosTheme.focusAccent),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (goalTitle != null)
+                _MetaPill(
+                  icon: Icons.flag_rounded,
+                  label: goalTitle!,
+                ),
+              if (linkedTaskCount > 0)
+                _MetaPill(
+                  icon: Icons.checklist_rtl_rounded,
+                  label: '$completedLinkedTasks/$linkedTaskCount subtasks',
+                ),
+              if (goalDeadlineBadge != null)
+                _MetaPill(
+                  icon: Icons.av_timer_rounded,
+                  label: 'Goal due $goalDeadlineBadge',
+                  color: goalDeadlineOverdue ? theme.colorScheme.error : null,
+                ),
+            ],
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
               const Icon(Icons.calendar_today_rounded, size: 16),
               const SizedBox(width: 6),
               Text(
-                DateFormat.MMMd().format(due),
+                due != null ? DateFormat.MMMd().format(due!) : 'No due date',
                 style: theme.textTheme.labelSmall,
               ),
             ],
@@ -177,4 +321,163 @@ class _MilestoneCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _MetaPill extends StatelessWidget {
+  const _MetaPill({required this.icon, required this.label, this.color});
+
+  final IconData icon;
+  final String label;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final tint = color ?? theme.colorScheme.onSurfaceVariant;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: tint.withOpacity(.08),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: tint),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(color: tint),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NewGoalDialog extends ConsumerStatefulWidget {
+  const _NewGoalDialog();
+
+  @override
+  ConsumerState<_NewGoalDialog> createState() => _NewGoalDialogState();
+}
+
+class _NewGoalDialogState extends ConsumerState<_NewGoalDialog> {
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  DateTime? _targetDate;
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AlertDialog(
+      title: const Text('Create goal'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(labelText: 'Title'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _descriptionController,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Description'),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _targetDate != null ? DateFormat.yMMMd().format(_targetDate!) : 'No target date',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _targetDate ?? DateTime.now(),
+                      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                      lastDate: DateTime.now().add(const Duration(days: 730)),
+                    );
+                    if (picked != null) setState(() => _targetDate = picked);
+                  },
+                  child: const Text('Pick date'),
+                ),
+                if (_targetDate != null)
+                  IconButton(
+                    tooltip: 'Clear date',
+                    onPressed: () => setState(() => _targetDate = null),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isSaving ? null : () => _submit(context),
+          child: _isSaving
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit(BuildContext context) async {
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Title required')));
+      return;
+    }
+    setState(() => _isSaving = true);
+    final quickAdd = ref.read(quickAddControllerProvider);
+    try {
+      await quickAdd.addGoal(
+        title: title,
+        description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+        targetDate: _targetDate,
+      );
+      if (context.mounted) Navigator.of(context).pop();
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save goal: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+}
+
+Map<String, List<Task>> _tasksGroupedByGoal(List<Task> tasks) {
+  final map = <String, List<Task>>{};
+  for (final task in tasks) {
+    final goalId = task.goalId;
+    if (goalId == null) continue;
+    map.putIfAbsent(goalId, () => <Task>[]).add(task);
+  }
+  return map;
 }

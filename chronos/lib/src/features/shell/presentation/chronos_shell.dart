@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
+import '../../../application/quick_add_controller.dart';
 import '../../../core/constants/app_sections.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -176,13 +178,13 @@ class _NavTile extends StatelessWidget {
   }
 }
 
-class _TopBar extends StatelessWidget {
+class _TopBar extends ConsumerWidget {
   const _TopBar({required this.colorScheme});
 
   final ColorScheme colorScheme;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return Container(
       height: 72,
@@ -204,12 +206,155 @@ class _TopBar extends StatelessWidget {
           ),
           const SizedBox(width: 16),
           FilledButton.icon(
-            onPressed: () {},
+            onPressed: () => _showQuickAddDialog(context, ref),
             icon: const Icon(Icons.add_rounded),
             label: const Text('Quick Add'),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _showQuickAddDialog(BuildContext context, WidgetRef ref) {
+    return showDialog(
+      context: context,
+      builder: (_) => const _QuickAddDialog(),
+    );
+  }
+}
+
+class _QuickAddDialog extends ConsumerStatefulWidget {
+  const _QuickAddDialog();
+
+  @override
+  ConsumerState<_QuickAddDialog> createState() => _QuickAddDialogState();
+}
+
+enum _QuickAddType { task, goal }
+
+class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _goalIdController = TextEditingController();
+  DateTime? _targetDate;
+  _QuickAddType _type = _QuickAddType.task;
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _goalIdController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AlertDialog(
+      title: const Text('Quick Add'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SegmentedButton<_QuickAddType>(
+              segments: const [
+                ButtonSegment(value: _QuickAddType.task, label: Text('Task')),
+                ButtonSegment(value: _QuickAddType.goal, label: Text('Goal')),
+              ],
+              selected: {_type},
+              onSelectionChanged: (selection) => setState(() => _type = selection.first),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(labelText: 'Title'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _descriptionController,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'Description'),
+            ),
+            if (_type == _QuickAddType.task) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _goalIdController,
+                decoration: const InputDecoration(labelText: 'Goal ID (optional)'),
+              ),
+            ] else ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _targetDate != null ? DateFormat.yMMMd().format(_targetDate!) : 'No target date',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                        lastDate: DateTime.now().add(const Duration(days: 730)),
+                      );
+                      if (picked != null) setState(() => _targetDate = picked);
+                    },
+                    child: const Text('Pick date'),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isSaving ? null : () => _submit(context),
+          child: _isSaving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit(BuildContext context) async {
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Title required')));
+      return;
+    }
+    setState(() => _isSaving = true);
+    final quickAdd = ref.read(quickAddControllerProvider);
+    try {
+      if (_type == _QuickAddType.task) {
+        await quickAdd.addTask(
+          title: title,
+          description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+          goalId: _goalIdController.text.trim().isEmpty ? null : _goalIdController.text.trim(),
+        );
+      } else {
+        await quickAdd.addGoal(
+          title: title,
+          description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+          targetDate: _targetDate,
+        );
+      }
+      if (context.mounted) Navigator.of(context).pop();
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 }

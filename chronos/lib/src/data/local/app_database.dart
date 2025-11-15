@@ -145,7 +145,7 @@ LazyDatabase _openConnection() {
 
 @DriftAccessor(tables: [Goals])
 class GoalDao extends DatabaseAccessor<ChronosDatabase> {
-  GoalDao(ChronosDatabase db) : super(db);
+  GoalDao(super.db);
 
   $GoalsTable get goals => attachedDatabase.goals;
 
@@ -157,7 +157,7 @@ class GoalDao extends DatabaseAccessor<ChronosDatabase> {
 
 @DriftAccessor(tables: [Projects])
 class ProjectDao extends DatabaseAccessor<ChronosDatabase> {
-  ProjectDao(ChronosDatabase db) : super(db);
+  ProjectDao(super.db);
 
   $ProjectsTable get projects => attachedDatabase.projects;
 
@@ -168,7 +168,7 @@ class ProjectDao extends DatabaseAccessor<ChronosDatabase> {
 
 @DriftAccessor(tables: [Tasks])
 class TaskDao extends DatabaseAccessor<ChronosDatabase> {
-  TaskDao(ChronosDatabase db) : super(db);
+  TaskDao(super.db);
 
   $TasksTable get tasks => attachedDatabase.tasks;
 
@@ -185,17 +185,30 @@ class TaskDao extends DatabaseAccessor<ChronosDatabase> {
 
 @DriftAccessor(tables: [FocusSessions])
 class FocusSessionDao extends DatabaseAccessor<ChronosDatabase> {
-  FocusSessionDao(ChronosDatabase db) : super(db);
+  FocusSessionDao(super.db);
 
   $FocusSessionsTable get focusSessions => attachedDatabase.focusSessions;
 
   Stream<List<FocusSession>> watchSessions() => select(focusSessions).watch();
   Future<void> logSession(FocusSessionsCompanion session) => into(focusSessions).insert(session);
+  Future<FocusSession?> activeSession() {
+    final query = select(focusSessions)
+      ..where((tbl) => tbl.endedAt.isNull())
+      ..orderBy([(tbl) => OrderingTerm.desc(tbl.startedAt)])
+      ..limit(1);
+    return query.getSingleOrNull();
+  }
+
+  Future<void> closeSession(String id, DateTime endedAt) {
+    return (update(focusSessions)..where((tbl) => tbl.id.equals(id))).write(
+      FocusSessionsCompanion(endedAt: Value(endedAt)),
+    );
+  }
 }
 
 @DriftAccessor(tables: [Tags])
 class TagDao extends DatabaseAccessor<ChronosDatabase> {
-  TagDao(ChronosDatabase db) : super(db);
+  TagDao(super.db);
 
   $TagsTable get tags => attachedDatabase.tags;
 
@@ -205,7 +218,7 @@ class TagDao extends DatabaseAccessor<ChronosDatabase> {
 
 @DriftAccessor(tables: [DigestSnapshots])
 class DigestDao extends DatabaseAccessor<ChronosDatabase> {
-  DigestDao(ChronosDatabase db) : super(db);
+  DigestDao(super.db);
 
   $DigestSnapshotsTable get digestSnapshots => attachedDatabase.digestSnapshots;
 

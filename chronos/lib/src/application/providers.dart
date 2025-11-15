@@ -18,6 +18,11 @@ final tasksStreamProvider = StreamProvider.autoDispose<List<Task>>((ref) {
   return repository.watchTasks();
 });
 
+final subTasksStreamProvider = StreamProvider.autoDispose<List<SubTask>>((ref) {
+  final repository = ref.watch(subTaskRepositoryProvider);
+  return repository.watchSubTasks();
+});
+
 final tasksDueTodayProvider = FutureProvider.autoDispose<List<Task>>((ref) {
   final repository = ref.watch(taskRepositoryProvider);
   final now = DateTime.now();

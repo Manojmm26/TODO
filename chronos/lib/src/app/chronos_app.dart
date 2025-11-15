@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme/app_theme.dart';
 import '../routing/app_router.dart';
+import '../application/recurrence_coordinator.dart';
 
 class ChronosApp extends ConsumerWidget {
   const ChronosApp({super.key});
@@ -11,6 +12,12 @@ class ChronosApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
     final router = ref.watch(appRouterProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final recurrence = ref.read(recurrenceCoordinatorProvider);
+      recurrence.bootstrap().catchError((error) {
+        debugPrint('Error initializing recurrence: $error');
+      });
+    });
 
     return MaterialApp.router(
       title: 'Chronos',

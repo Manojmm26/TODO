@@ -41,6 +41,7 @@ class Tasks extends Table {
   TextColumn get id => text()();
   TextColumn get projectId => text().nullable().references(Projects, #id)();
   TextColumn get goalId => text().nullable().references(Goals, #id)();
+  TextColumn get parentRecurringId => text().nullable().references(Tasks, #id)();
   TextColumn get title => text()();
   TextColumn get description => text().nullable()();
   IntColumn get status => integer().withDefault(const Constant(0))();
@@ -126,7 +127,15 @@ class DigestSnapshots extends Table {
     TaskTags,
     DigestSnapshots,
   ],
-  daos: [GoalDao, ProjectDao, TaskDao, FocusSessionDao, TagDao, DigestDao],
+  daos: [
+    GoalDao,
+    ProjectDao,
+    TaskDao,
+    SubTaskDao,
+    FocusSessionDao,
+    TagDao,
+    DigestDao,
+  ],
 )
 class ChronosDatabase extends _$ChronosDatabase {
   ChronosDatabase() : super(_openConnection());
@@ -180,7 +189,47 @@ class TaskDao extends DatabaseAccessor<ChronosDatabase> {
   }
 
   Future<void> upsertTask(TasksCompanion task) => into(tasks).insertOnConflictUpdate(task);
+  Future<void> updateTask(String id, TasksCompanion task) {
+    assert(!task.id.present, 'Do not include an id when updating a task');
+    return (update(tasks)..where((tbl) => tbl.id.equals(id))).write(task).then((_) => null);
+  }
   Future<int> deleteTask(String id) => (delete(tasks)..where((tbl) => tbl.id.equals(id))).go();
+
+  Future<Task?> taskById(String id) => (select(tasks)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+
+  Future<List<Task>> recurringSourceTasks() {
+    return (select(tasks)
+          ..where((tbl) => tbl.isRecurring.equals(true) & tbl.parentRecurringId.isNull()))
+        .get();
+  }
+
+  Future<List<Task>> seriesForTemplate(String templateId) => (select(tasks)
+        ..where((tbl) => tbl.id.equals(templateId) | tbl.parentRecurringId.equals(templateId))
+        ..orderBy([(tbl) => OrderingTerm(expression: tbl.dueDate, mode: OrderingMode.desc)]))
+      .get();
+}
+
+@DriftAccessor(tables: [SubTasks])
+class SubTaskDao extends DatabaseAccessor<ChronosDatabase> {
+  SubTaskDao(super.db);
+
+  $SubTasksTable get subTasks => attachedDatabase.subTasks;
+
+  Stream<List<SubTask>> watchSubTasks() => select(subTasks).watch();
+
+  Future<List<SubTask>> subTasksForTask(String taskId) {
+    return (select(subTasks)..where((tbl) => tbl.taskId.equals(taskId))).get();
+  }
+
+  Future<void> upsertSubTask(SubTasksCompanion subTask) => into(subTasks).insertOnConflictUpdate(subTask);
+
+  Future<int> deleteSubTask(String id) => (delete(subTasks)..where((tbl) => tbl.id.equals(id))).go();
+
+  Future<void> toggleCompletion(String id, bool isCompleted) {
+    return (update(subTasks)..where((tbl) => tbl.id.equals(id))).write(
+      SubTasksCompanion(isCompleted: Value(isCompleted)),
+    );
+  }
 }
 
 @DriftAccessor(tables: [FocusSessions])

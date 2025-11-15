@@ -10,16 +10,19 @@ final _uuid = const Uuid();
 final quickAddControllerProvider = Provider<QuickAddController>((ref) {
   final tasks = ref.read(taskRepositoryProvider);
   final goals = ref.read(goalRepositoryProvider);
-  return QuickAddController(tasks: tasks, goals: goals);
+  final subTasks = ref.read(subTaskRepositoryProvider);
+  return QuickAddController(tasks: tasks, goals: goals, subTasks: subTasks);
 });
 
 class QuickAddController {
-  QuickAddController({required TaskRepository tasks, required GoalRepository goals})
+  QuickAddController({required TaskRepository tasks, required GoalRepository goals, required SubTaskRepository subTasks})
       : _tasks = tasks,
-        _goals = goals;
+        _goals = goals,
+        _subTasks = subTasks;
 
   final TaskRepository _tasks;
   final GoalRepository _goals;
+  final SubTaskRepository _subTasks;
 
   Future<void> addTask({
     required String title,
@@ -31,6 +34,8 @@ class QuickAddController {
     bool flagImmediate = false,
     bool flagToday = false,
     int? priority,
+    bool isRecurring = false,
+    String? recurrenceRule,
   }) {
     final companion = TasksCompanion(
       id: Value(_uuid.v4()),
@@ -43,6 +48,8 @@ class QuickAddController {
       flagImmediate: Value(flagImmediate),
       flagToday: Value(flagToday),
       priority: priority != null ? Value(priority) : const Value.absent(),
+      isRecurring: Value(isRecurring),
+      recurrenceRule: recurrenceRule != null ? Value(recurrenceRule) : const Value.absent(),
       createdAt: Value(DateTime.now()),
       updatedAt: Value(DateTime.now()),
     );
@@ -59,5 +66,16 @@ class QuickAddController {
       updatedAt: Value(DateTime.now()),
     );
     return _goals.upsert(companion);
+  }
+
+  Future<void> addSubTask({required String taskId, required String title, int? sortOrder}) {
+    final companion = SubTasksCompanion(
+      id: Value(_uuid.v4()),
+      taskId: Value(taskId),
+      title: Value(title),
+      sortOrder: sortOrder != null ? Value(sortOrder) : const Value.absent(),
+      isCompleted: const Value(false),
+    );
+    return _subTasks.upsert(companion);
   }
 }

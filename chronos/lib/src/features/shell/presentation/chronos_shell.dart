@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../application/quick_add_controller.dart';
 import '../../../core/constants/app_sections.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/recurrence/recurrence_utils.dart';
 
 class ChronosShell extends ConsumerWidget {
   const ChronosShell({super.key, required this.state, required this.child});
@@ -236,7 +237,10 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _goalIdController = TextEditingController();
+  final _customRecurrenceController = TextEditingController();
   DateTime? _targetDate;
+  DateTime? _recurrenceEndDate;
+  RecurrencePreset _recurrencePreset = RecurrencePreset.none;
   _QuickAddType _type = _QuickAddType.task;
   bool _isSaving = false;
 
@@ -245,6 +249,7 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
     _titleController.dispose();
     _descriptionController.dispose();
     _goalIdController.dispose();
+    _customRecurrenceController.dispose();
     super.dispose();
   }
 
@@ -283,6 +288,82 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
                 controller: _goalIdController,
                 decoration: const InputDecoration(labelText: 'Goal ID (optional)'),
               ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<RecurrencePreset>(
+                value: _recurrencePreset,
+                decoration: const InputDecoration(labelText: 'Repeats'),
+                items: RecurrencePreset.values
+                    .map(
+                      (preset) => DropdownMenuItem(
+                        value: preset,
+                        child: Text(preset.label),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (preset) {
+                  if (preset == null) return;
+                  setState(() {
+                    _recurrencePreset = preset;
+                    if (preset == RecurrencePreset.none) {
+                      _recurrenceEndDate = null;
+                    }
+                  });
+                },
+              ),
+              if (_recurrencePreset == RecurrencePreset.custom) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _customRecurrenceController,
+                  decoration: const InputDecoration(
+                    labelText: 'Custom RRULE',
+                    hintText: 'e.g. FREQ=WEEKLY;BYDAY=MO',
+                  ),
+                ),
+              ],
+              if (_recurrencePreset != RecurrencePreset.none) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _recurrenceEndDate != null
+                            ? 'Ends ${DateFormat.yMMMd().format(_recurrenceEndDate!)}'
+                            : 'No end date',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        final now = DateTime.now();
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _recurrenceEndDate ?? now,
+                          firstDate: now,
+                          lastDate: now.add(const Duration(days: 730)),
+                        );
+                        if (picked != null) setState(() => _recurrenceEndDate = picked);
+                      },
+                      child: const Text('Set end'),
+                    ),
+                    if (_recurrenceEndDate != null)
+                      IconButton(
+                        tooltip: 'Clear end date',
+                        onPressed: () => setState(() => _recurrenceEndDate = null),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                  ],
+                ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    recurrenceSummary(
+                      _recurrencePreset,
+                      endDate: _recurrenceEndDate,
+                    ),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ],
             ] else ...[
               const SizedBox(height: 12),
               Row(
@@ -334,10 +415,17 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
     final quickAdd = ref.read(quickAddControllerProvider);
     try {
       if (_type == _QuickAddType.task) {
+        final recurrenceRule = buildRecurrenceRule(
+          _recurrencePreset,
+          endDate: _recurrenceEndDate,
+          customRule: _customRecurrenceController.text,
+        );
         await quickAdd.addTask(
           title: title,
           description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
           goalId: _goalIdController.text.trim().isEmpty ? null : _goalIdController.text.trim(),
+          isRecurring: recurrenceRule != null,
+          recurrenceRule: recurrenceRule,
         );
       } else {
         await quickAdd.addGoal(

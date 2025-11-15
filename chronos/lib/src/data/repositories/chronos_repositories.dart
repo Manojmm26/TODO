@@ -27,7 +27,22 @@ class TaskRepository {
   Stream<List<Task>> watchTasks() => _dao.watchTasks();
   Future<List<Task>> tasksDueToday(DateTime start, DateTime end) => _dao.tasksDueToday(start, end);
   Future<void> upsert(TasksCompanion task) => _dao.upsertTask(task);
+  Future<void> update(String id, TasksCompanion task) => _dao.updateTask(id, task);
   Future<void> delete(String id) => _dao.deleteTask(id).then((_) => null);
+  Future<List<Task>> recurringTemplates() => _dao.recurringSourceTasks();
+  Future<List<Task>> seriesForTemplate(String templateId) => _dao.seriesForTemplate(templateId);
+  Future<Task?> taskById(String id) => _dao.taskById(id);
+}
+
+class SubTaskRepository {
+  SubTaskRepository(this._dao);
+  final SubTaskDao _dao;
+
+  Stream<List<SubTask>> watchSubTasks() => _dao.watchSubTasks();
+  Future<List<SubTask>> forTask(String taskId) => _dao.subTasksForTask(taskId);
+  Future<void> upsert(SubTasksCompanion subTask) => _dao.upsertSubTask(subTask);
+  Future<void> delete(String id) => _dao.deleteSubTask(id).then((_) => null);
+  Future<void> toggleCompletion(String id, bool isCompleted) => _dao.toggleCompletion(id, isCompleted);
 }
 
 class FocusSessionRepository {
@@ -69,6 +84,11 @@ final projectRepositoryProvider = Provider<ProjectRepository>((ref) {
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
   final db = ref.watch(chronosDatabaseProvider);
   return TaskRepository(TaskDao(db));
+});
+
+final subTaskRepositoryProvider = Provider<SubTaskRepository>((ref) {
+  final db = ref.watch(chronosDatabaseProvider);
+  return SubTaskRepository(SubTaskDao(db));
 });
 
 final focusRepositoryProvider = Provider<FocusSessionRepository>((ref) {

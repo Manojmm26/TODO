@@ -10,6 +10,17 @@ Map<TimelineBucket, List<Task>> groupTasksByBucket(List<Task> tasks) {
   return map;
 }
 
+Map<String, List<SubTask>> groupSubTasksByTask(List<SubTask> subTasks) {
+  final map = <String, List<SubTask>>{};
+  for (final subTask in subTasks) {
+    map.putIfAbsent(subTask.taskId, () => []).add(subTask);
+  }
+  for (final entry in map.entries) {
+    entry.value.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
+  return map;
+}
+
 TimelineBucket bucketForTask(Task task) {
   if (task.flagImmediate) return TimelineBucket.immediate;
   if (task.flagToday) return TimelineBucket.today;
@@ -30,6 +41,12 @@ double taskProgress(Task task) {
   final actual = task.actualMinutes;
   final value = actual / est;
   return value.clamp(0.0, 1.0);
+}
+
+double subTaskCompletionProgress(List<SubTask> subTasks) {
+  if (subTasks.isEmpty) return 0;
+  final completed = subTasks.where((subTask) => subTask.isCompleted).length;
+  return completed / subTasks.length;
 }
 
 TaskPriority priorityFromInt(int value) {

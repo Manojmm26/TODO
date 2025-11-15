@@ -1070,6 +1070,21 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
       'REFERENCES goals (id)',
     ),
   );
+  static const VerificationMeta _parentRecurringIdMeta = const VerificationMeta(
+    'parentRecurringId',
+  );
+  @override
+  late final GeneratedColumn<String> parentRecurringId =
+      GeneratedColumn<String>(
+        'parent_recurring_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES tasks (id)',
+        ),
+      );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
@@ -1254,6 +1269,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     id,
     projectId,
     goalId,
+    parentRecurringId,
     title,
     description,
     status,
@@ -1297,6 +1313,15 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
       context.handle(
         _goalIdMeta,
         goalId.isAcceptableOrUnknown(data['goal_id']!, _goalIdMeta),
+      );
+    }
+    if (data.containsKey('parent_recurring_id')) {
+      context.handle(
+        _parentRecurringIdMeta,
+        parentRecurringId.isAcceptableOrUnknown(
+          data['parent_recurring_id']!,
+          _parentRecurringIdMeta,
+        ),
       );
     }
     if (data.containsKey('title')) {
@@ -1430,6 +1455,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.string,
         data['${effectivePrefix}goal_id'],
       ),
+      parentRecurringId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}parent_recurring_id'],
+      ),
       title: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}title'],
@@ -1503,6 +1532,7 @@ class Task extends DataClass implements Insertable<Task> {
   final String id;
   final String? projectId;
   final String? goalId;
+  final String? parentRecurringId;
   final String title;
   final String? description;
   final int status;
@@ -1522,6 +1552,7 @@ class Task extends DataClass implements Insertable<Task> {
     required this.id,
     this.projectId,
     this.goalId,
+    this.parentRecurringId,
     required this.title,
     this.description,
     required this.status,
@@ -1547,6 +1578,9 @@ class Task extends DataClass implements Insertable<Task> {
     }
     if (!nullToAbsent || goalId != null) {
       map['goal_id'] = Variable<String>(goalId);
+    }
+    if (!nullToAbsent || parentRecurringId != null) {
+      map['parent_recurring_id'] = Variable<String>(parentRecurringId);
     }
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || description != null) {
@@ -1585,6 +1619,9 @@ class Task extends DataClass implements Insertable<Task> {
       goalId: goalId == null && nullToAbsent
           ? const Value.absent()
           : Value(goalId),
+      parentRecurringId: parentRecurringId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentRecurringId),
       title: Value(title),
       description: description == null && nullToAbsent
           ? const Value.absent()
@@ -1622,6 +1659,9 @@ class Task extends DataClass implements Insertable<Task> {
       id: serializer.fromJson<String>(json['id']),
       projectId: serializer.fromJson<String?>(json['projectId']),
       goalId: serializer.fromJson<String?>(json['goalId']),
+      parentRecurringId: serializer.fromJson<String?>(
+        json['parentRecurringId'],
+      ),
       title: serializer.fromJson<String>(json['title']),
       description: serializer.fromJson<String?>(json['description']),
       status: serializer.fromJson<int>(json['status']),
@@ -1646,6 +1686,7 @@ class Task extends DataClass implements Insertable<Task> {
       'id': serializer.toJson<String>(id),
       'projectId': serializer.toJson<String?>(projectId),
       'goalId': serializer.toJson<String?>(goalId),
+      'parentRecurringId': serializer.toJson<String?>(parentRecurringId),
       'title': serializer.toJson<String>(title),
       'description': serializer.toJson<String?>(description),
       'status': serializer.toJson<int>(status),
@@ -1668,6 +1709,7 @@ class Task extends DataClass implements Insertable<Task> {
     String? id,
     Value<String?> projectId = const Value.absent(),
     Value<String?> goalId = const Value.absent(),
+    Value<String?> parentRecurringId = const Value.absent(),
     String? title,
     Value<String?> description = const Value.absent(),
     int? status,
@@ -1687,6 +1729,9 @@ class Task extends DataClass implements Insertable<Task> {
     id: id ?? this.id,
     projectId: projectId.present ? projectId.value : this.projectId,
     goalId: goalId.present ? goalId.value : this.goalId,
+    parentRecurringId: parentRecurringId.present
+        ? parentRecurringId.value
+        : this.parentRecurringId,
     title: title ?? this.title,
     description: description.present ? description.value : this.description,
     status: status ?? this.status,
@@ -1710,6 +1755,9 @@ class Task extends DataClass implements Insertable<Task> {
       id: data.id.present ? data.id.value : this.id,
       projectId: data.projectId.present ? data.projectId.value : this.projectId,
       goalId: data.goalId.present ? data.goalId.value : this.goalId,
+      parentRecurringId: data.parentRecurringId.present
+          ? data.parentRecurringId.value
+          : this.parentRecurringId,
       title: data.title.present ? data.title.value : this.title,
       description: data.description.present
           ? data.description.value
@@ -1748,6 +1796,7 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
           ..write('goalId: $goalId, ')
+          ..write('parentRecurringId: $parentRecurringId, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('status: $status, ')
@@ -1772,6 +1821,7 @@ class Task extends DataClass implements Insertable<Task> {
     id,
     projectId,
     goalId,
+    parentRecurringId,
     title,
     description,
     status,
@@ -1795,6 +1845,7 @@ class Task extends DataClass implements Insertable<Task> {
           other.id == this.id &&
           other.projectId == this.projectId &&
           other.goalId == this.goalId &&
+          other.parentRecurringId == this.parentRecurringId &&
           other.title == this.title &&
           other.description == this.description &&
           other.status == this.status &&
@@ -1816,6 +1867,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<String> id;
   final Value<String?> projectId;
   final Value<String?> goalId;
+  final Value<String?> parentRecurringId;
   final Value<String> title;
   final Value<String?> description;
   final Value<int> status;
@@ -1836,6 +1888,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.id = const Value.absent(),
     this.projectId = const Value.absent(),
     this.goalId = const Value.absent(),
+    this.parentRecurringId = const Value.absent(),
     this.title = const Value.absent(),
     this.description = const Value.absent(),
     this.status = const Value.absent(),
@@ -1857,6 +1910,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     required String id,
     this.projectId = const Value.absent(),
     this.goalId = const Value.absent(),
+    this.parentRecurringId = const Value.absent(),
     required String title,
     this.description = const Value.absent(),
     this.status = const Value.absent(),
@@ -1879,6 +1933,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<String>? id,
     Expression<String>? projectId,
     Expression<String>? goalId,
+    Expression<String>? parentRecurringId,
     Expression<String>? title,
     Expression<String>? description,
     Expression<int>? status,
@@ -1900,6 +1955,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (id != null) 'id': id,
       if (projectId != null) 'project_id': projectId,
       if (goalId != null) 'goal_id': goalId,
+      if (parentRecurringId != null) 'parent_recurring_id': parentRecurringId,
       if (title != null) 'title': title,
       if (description != null) 'description': description,
       if (status != null) 'status': status,
@@ -1923,6 +1979,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<String>? id,
     Value<String?>? projectId,
     Value<String?>? goalId,
+    Value<String?>? parentRecurringId,
     Value<String>? title,
     Value<String?>? description,
     Value<int>? status,
@@ -1944,6 +2001,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       id: id ?? this.id,
       projectId: projectId ?? this.projectId,
       goalId: goalId ?? this.goalId,
+      parentRecurringId: parentRecurringId ?? this.parentRecurringId,
       title: title ?? this.title,
       description: description ?? this.description,
       status: status ?? this.status,
@@ -1974,6 +2032,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     }
     if (goalId.present) {
       map['goal_id'] = Variable<String>(goalId.value);
+    }
+    if (parentRecurringId.present) {
+      map['parent_recurring_id'] = Variable<String>(parentRecurringId.value);
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
@@ -2032,6 +2093,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('id: $id, ')
           ..write('projectId: $projectId, ')
           ..write('goalId: $goalId, ')
+          ..write('parentRecurringId: $parentRecurringId, ')
           ..write('title: $title, ')
           ..write('description: $description, ')
           ..write('status: $status, ')
@@ -4000,6 +4062,7 @@ abstract class _$ChronosDatabase extends GeneratedDatabase {
   late final GoalDao goalDao = GoalDao(this as ChronosDatabase);
   late final ProjectDao projectDao = ProjectDao(this as ChronosDatabase);
   late final TaskDao taskDao = TaskDao(this as ChronosDatabase);
+  late final SubTaskDao subTaskDao = SubTaskDao(this as ChronosDatabase);
   late final FocusSessionDao focusSessionDao = FocusSessionDao(
     this as ChronosDatabase,
   );
@@ -5038,6 +5101,7 @@ typedef $$TasksTableCreateCompanionBuilder =
       required String id,
       Value<String?> projectId,
       Value<String?> goalId,
+      Value<String?> parentRecurringId,
       required String title,
       Value<String?> description,
       Value<int> status,
@@ -5060,6 +5124,7 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String?> projectId,
       Value<String?> goalId,
+      Value<String?> parentRecurringId,
       Value<String> title,
       Value<String?> description,
       Value<int> status,
@@ -5110,6 +5175,25 @@ final class $$TasksTableReferences
       $_db.goals,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_goalIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $TasksTable _parentRecurringIdTable(_$ChronosDatabase db) =>
+      db.tasks.createAlias(
+        $_aliasNameGenerator(db.tasks.parentRecurringId, db.tasks.id),
+      );
+
+  $$TasksTableProcessedTableManager? get parentRecurringId {
+    final $_column = $_itemColumn<String>('parent_recurring_id');
+    if ($_column == null) return null;
+    final manager = $$TasksTableTableManager(
+      $_db,
+      $_db.tasks,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_parentRecurringIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
@@ -5300,6 +5384,29 @@ class $$TasksTableFilterComposer
           }) => $$GoalsTableFilterComposer(
             $db: $db,
             $table: $db.goals,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TasksTableFilterComposer get parentRecurringId {
+    final $$TasksTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentRecurringId,
+      referencedTable: $db.tasks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TasksTableFilterComposer(
+            $db: $db,
+            $table: $db.tasks,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -5519,6 +5626,29 @@ class $$TasksTableOrderingComposer
     );
     return composer;
   }
+
+  $$TasksTableOrderingComposer get parentRecurringId {
+    final $$TasksTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentRecurringId,
+      referencedTable: $db.tasks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TasksTableOrderingComposer(
+            $db: $db,
+            $table: $db.tasks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$TasksTableAnnotationComposer
@@ -5638,6 +5768,29 @@ class $$TasksTableAnnotationComposer
     return composer;
   }
 
+  $$TasksTableAnnotationComposer get parentRecurringId {
+    final $$TasksTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.parentRecurringId,
+      referencedTable: $db.tasks,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TasksTableAnnotationComposer(
+            $db: $db,
+            $table: $db.tasks,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
   Expression<T> subTasksRefs<T extends Object>(
     Expression<T> Function($$SubTasksTableAnnotationComposer a) f,
   ) {
@@ -5730,6 +5883,7 @@ class $$TasksTableTableManager
           PrefetchHooks Function({
             bool projectId,
             bool goalId,
+            bool parentRecurringId,
             bool subTasksRefs,
             bool focusSessionsRefs,
             bool taskTagsRefs,
@@ -5751,6 +5905,7 @@ class $$TasksTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String?> projectId = const Value.absent(),
                 Value<String?> goalId = const Value.absent(),
+                Value<String?> parentRecurringId = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> description = const Value.absent(),
                 Value<int> status = const Value.absent(),
@@ -5771,6 +5926,7 @@ class $$TasksTableTableManager
                 id: id,
                 projectId: projectId,
                 goalId: goalId,
+                parentRecurringId: parentRecurringId,
                 title: title,
                 description: description,
                 status: status,
@@ -5793,6 +5949,7 @@ class $$TasksTableTableManager
                 required String id,
                 Value<String?> projectId = const Value.absent(),
                 Value<String?> goalId = const Value.absent(),
+                Value<String?> parentRecurringId = const Value.absent(),
                 required String title,
                 Value<String?> description = const Value.absent(),
                 Value<int> status = const Value.absent(),
@@ -5813,6 +5970,7 @@ class $$TasksTableTableManager
                 id: id,
                 projectId: projectId,
                 goalId: goalId,
+                parentRecurringId: parentRecurringId,
                 title: title,
                 description: description,
                 status: status,
@@ -5840,6 +5998,7 @@ class $$TasksTableTableManager
               ({
                 projectId = false,
                 goalId = false,
+                parentRecurringId = false,
                 subTasksRefs = false,
                 focusSessionsRefs = false,
                 taskTagsRefs = false,
@@ -5889,6 +6048,19 @@ class $$TasksTableTableManager
                                         ._goalIdTable(db),
                                     referencedColumn: $$TasksTableReferences
                                         ._goalIdTable(db)
+                                        .id,
+                                  )
+                                  as T;
+                        }
+                        if (parentRecurringId) {
+                          state =
+                              state.withJoin(
+                                    currentTable: table,
+                                    currentColumn: table.parentRecurringId,
+                                    referencedTable: $$TasksTableReferences
+                                        ._parentRecurringIdTable(db),
+                                    referencedColumn: $$TasksTableReferences
+                                        ._parentRecurringIdTable(db)
                                         .id,
                                   )
                                   as T;
@@ -5976,6 +6148,7 @@ typedef $$TasksTableProcessedTableManager =
       PrefetchHooks Function({
         bool projectId,
         bool goalId,
+        bool parentRecurringId,
         bool subTasksRefs,
         bool focusSessionsRefs,
         bool taskTagsRefs,
@@ -7697,6 +7870,12 @@ mixin _$TaskDaoMixin on DatabaseAccessor<ChronosDatabase> {
   $GoalsTable get goals => attachedDatabase.goals;
   $ProjectsTable get projects => attachedDatabase.projects;
   $TasksTable get tasks => attachedDatabase.tasks;
+}
+mixin _$SubTaskDaoMixin on DatabaseAccessor<ChronosDatabase> {
+  $GoalsTable get goals => attachedDatabase.goals;
+  $ProjectsTable get projects => attachedDatabase.projects;
+  $TasksTable get tasks => attachedDatabase.tasks;
+  $SubTasksTable get subTasks => attachedDatabase.subTasks;
 }
 mixin _$FocusSessionDaoMixin on DatabaseAccessor<ChronosDatabase> {
   $GoalsTable get goals => attachedDatabase.goals;

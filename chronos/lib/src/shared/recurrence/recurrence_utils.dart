@@ -54,12 +54,19 @@ String? buildRecurrenceRule(
 
   if (baseRule == null) return null;
 
+  String ruleWithUntil;
   if (endDate != null) {
     final untilValue = _formatUntil(endDate);
-    return '$baseRule;UNTIL=$untilValue';
+    ruleWithUntil = '$baseRule;UNTIL=$untilValue';
+  } else {
+    ruleWithUntil = baseRule;
   }
 
-  return baseRule;
+  if (ruleWithUntil.startsWith('RRULE:')) {
+    return ruleWithUntil;
+  }
+
+  return 'RRULE:$ruleWithUntil';
 }
 
 String recurrenceSummary(

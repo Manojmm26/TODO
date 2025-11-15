@@ -62,11 +62,13 @@ Future<void> onTaskCompleted(Task task) async {
       try {
     final ruleString = template.recurrenceRule;
     if (ruleString == null || ruleString.isEmpty) return;
-    if (!isValidRecurrenceRule(ruleString)) {
-      debugPrint('Invalid recurrence rule for task ${template.id}: $ruleString');
-      return;
+
+    String normalizedRule = ruleString.trim();
+    if (!normalizedRule.startsWith('RRULE:')) {
+      normalizedRule = 'RRULE:$normalizedRule';
     }
-    final rule = RecurrenceRule.fromString(ruleString);
+
+    final rule = RecurrenceRule.fromString(normalizedRule);
     final templateStart = (template.startDate ?? template.dueDate ?? DateTime.now()).toUtc();
     final pivot = (after ?? DateTime.now()).toUtc();
     final normalizedAfter = pivot.isBefore(templateStart) ? templateStart : pivot;

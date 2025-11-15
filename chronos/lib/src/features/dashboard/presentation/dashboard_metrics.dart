@@ -147,3 +147,34 @@ int sessionsTodayCount(List<FocusSession> sessions) {
       .where((session) => session.startedAt.isAfter(startOfDay) && session.startedAt.isBefore(endOfDay))
       .length;
 }
+
+/// Returns the fraction of time remaining in the current day as a 0..1 value.
+double timeLeftFractionToday() {
+  final now = DateTime.now();
+  final startOfDay = DateTime(now.year, now.month, now.day);
+  final endOfDay = startOfDay.add(const Duration(days: 1));
+  final total = endOfDay.difference(startOfDay).inMinutes.toDouble();
+  final left = endOfDay.difference(now).inMinutes.toDouble();
+  return (left / total).clamp(0.0, 1.0);
+}
+
+/// Returns the fraction of time remaining in the current week (Mon-Sun) as 0..1.
+double timeLeftFractionWeek() {
+  final now = DateTime.now();
+  // Start of week (Monday)
+  final startOfWeek = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+  final endOfWeek = startOfWeek.add(const Duration(days: 7));
+  final total = endOfWeek.difference(startOfWeek).inMinutes.toDouble();
+  final left = endOfWeek.difference(now).inMinutes.toDouble();
+  return (left / total).clamp(0.0, 1.0);
+}
+
+/// Returns the fraction of time remaining in the current month as 0..1.
+double timeLeftFractionMonth() {
+  final now = DateTime.now();
+  final startOfMonth = DateTime(now.year, now.month, 1);
+  final startOfNextMonth = (now.month < 12) ? DateTime(now.year, now.month + 1, 1) : DateTime(now.year + 1, 1, 1);
+  final total = startOfNextMonth.difference(startOfMonth).inMinutes.toDouble();
+  final left = startOfNextMonth.difference(now).inMinutes.toDouble();
+  return (left / total).clamp(0.0, 1.0);
+}

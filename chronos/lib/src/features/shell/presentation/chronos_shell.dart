@@ -8,17 +8,24 @@ import '../../../core/constants/app_sections.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/recurrence/recurrence_utils.dart';
 
-class ChronosShell extends ConsumerWidget {
+class ChronosShell extends ConsumerStatefulWidget {
   const ChronosShell({super.key, required this.state, required this.child});
 
   final GoRouterState state;
   final Widget child;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ChronosShell> createState() => _ChronosShellState();
+}
+
+class _ChronosShellState extends ConsumerState<ChronosShell> {
+  bool _isCollapsed = false;
+
+  @override
+  Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final selectedIndex = chronosSections.indexWhere(
-      (section) => state.matchedLocation == section.route,
+      (section) => widget.state.matchedLocation == section.route,
     );
 
     return Scaffold(
@@ -26,6 +33,8 @@ class ChronosShell extends ConsumerWidget {
         child: Row(
           children: [
             _SidebarNavigation(
+              isCollapsed: _isCollapsed,
+              onToggle: () => setState(() => _isCollapsed = !_isCollapsed),
               selected: selectedIndex >= 0 ? selectedIndex : 0,
               onSelect: (index) => context.go(chronosSections[index].route),
             ),
@@ -38,7 +47,7 @@ class ChronosShell extends ConsumerWidget {
                   Expanded(
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
-                      child: child,
+                      child: widget.child,
                     ),
                   ),
                 ],
@@ -52,32 +61,47 @@ class ChronosShell extends ConsumerWidget {
 }
 
 class _SidebarNavigation extends StatelessWidget {
-  const _SidebarNavigation({required this.selected, required this.onSelect});
+  const _SidebarNavigation({
+    required this.selected,
+    required this.onSelect,
+    required this.isCollapsed,
+    required this.onToggle,
+  });
 
   final int selected;
   final ValueChanged<int> onSelect;
+  final bool isCollapsed;
+  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
 
-    return Container(
-      width: 230,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      width: isCollapsed ? 80 : 230,
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
       color: brightness == Brightness.dark
           ? const Color(0xFF0C0F17)
           : const Color(0xFFFBFBFE),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            isCollapsed ? CrossAxisAlignment.center : CrossAxisAlignment.start,
         children: [
-          Text(
-            'Chronos',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
+          if (!isCollapsed)
+            Text(
+              'Chronos',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: ChronosTheme.focusAccent,
+              ),
+            ),
+          if (isCollapsed)
+            Icon(
+              Icons.watch_later,
               color: ChronosTheme.focusAccent,
             ),
-          ),
           const SizedBox(height: 24),
           ...List.generate(chronosSections.length, (index) {
             final section = chronosSections[index];
@@ -87,26 +111,40 @@ class _SidebarNavigation extends StatelessWidget {
               child: _NavTile(
                 section: section,
                 isSelected: isSelected,
+                isCollapsed: isCollapsed,
                 onTap: () => onSelect(index),
               ),
             );
           }),
           const Spacer(),
-          Text('Focus Sessions', style: theme.textTheme.labelSmall),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: LinearProgressIndicator(
-                  value: 0.4,
-                  minHeight: 6,
-                  backgroundColor: theme.dividerColor.withOpacity(.3),
-                  valueColor: AlwaysStoppedAnimation(ChronosTheme.focusAccent),
+          if (!isCollapsed) ...[
+            Text('Focus Sessions', style: theme.textTheme.labelSmall),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: LinearProgressIndicator(
+                    value: 0.4,
+                    minHeight: 6,
+                    backgroundColor: theme.dividerColor.withOpacity(.3),
+                    valueColor:
+                        AlwaysStoppedAnimation(ChronosTheme.focusAccent),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Text('2/5', style: theme.textTheme.labelSmall),
-            ],
+                const SizedBox(width: 12),
+                Text('2/5', style: theme.textTheme.labelSmall),
+              ],
+            ),
+          ],
+          const SizedBox(height: 24),
+          IconButton(
+            onPressed: onToggle,
+            icon: Icon(
+              isCollapsed
+                  ? Icons.arrow_forward_ios_rounded
+                  : Icons.arrow_back_ios_rounded,
+              size: 18,
+            ),
           ),
         ],
       ),
@@ -119,11 +157,13 @@ class _NavTile extends StatelessWidget {
     required this.section,
     required this.isSelected,
     required this.onTap,
+    required this.isCollapsed,
   });
 
   final ChronosSection section;
   final bool isSelected;
   final VoidCallback onTap;
+  final bool isCollapsed;
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +174,7 @@ class _NavTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+        padding: EdgeInsets.symmetric(vertical: 12, horizontal: isCollapsed ? 8 : 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           color: isSelected
@@ -142,6 +182,8 @@ class _NavTile extends StatelessWidget {
               : Colors.transparent,
         ),
         child: Row(
+          mainAxisAlignment:
+              isCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
           children: [
             Icon(
               section.icon,
@@ -149,29 +191,31 @@ class _NavTile extends StatelessWidget {
                   ? ChronosTheme.focusAccent
                   : colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    section.label,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isSelected
-                          ? ChronosTheme.focusAccent
-                          : colorScheme.onSurface,
+            if (!isCollapsed) ...[
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      section.label,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isSelected
+                            ? ChronosTheme.focusAccent
+                            : colorScheme.onSurface,
+                      ),
                     ),
-                  ),
-                  Text(
-                    section.description,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                    Text(
+                      section.description,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

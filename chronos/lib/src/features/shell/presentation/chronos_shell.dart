@@ -19,7 +19,7 @@ class ChronosShell extends ConsumerStatefulWidget {
 }
 
 class _ChronosShellState extends ConsumerState<ChronosShell> {
-  bool _isCollapsed = false;
+  bool _isCollapsed = true;
 
   @override
   Widget build(BuildContext context) {
@@ -28,30 +28,57 @@ class _ChronosShellState extends ConsumerState<ChronosShell> {
       (section) => widget.state.matchedLocation == section.route,
     );
 
+    final content = Row(
+      children: [
+        const SizedBox(width: 80), // Space for collapsed sidebar
+        const VerticalDivider(width: 1),
+        Expanded(
+          child: Column(
+            children: [
+              _TopBar(colorScheme: colorScheme),
+              const Divider(height: 1),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: widget.child,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
     return Scaffold(
       body: SafeArea(
-        child: Row(
+        child: Stack(
           children: [
+            content,
+            if (!_isCollapsed)
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isCollapsed = true;
+                  });
+                },
+                child: Container(
+                  color: Colors.black.withOpacity(0.3),
+                  margin: const EdgeInsets.only(left: 230), // expanded width
+                ),
+              ),
             _SidebarNavigation(
+              key: ValueKey<bool>(_isCollapsed),
               isCollapsed: _isCollapsed,
               onToggle: () => setState(() => _isCollapsed = !_isCollapsed),
               selected: selectedIndex >= 0 ? selectedIndex : 0,
-              onSelect: (index) => context.go(chronosSections[index].route),
-            ),
-            const VerticalDivider(width: 1),
-            Expanded(
-              child: Column(
-                children: [
-                  _TopBar(colorScheme: colorScheme),
-                  const Divider(height: 1),
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 250),
-                      child: widget.child,
-                    ),
-                  ),
-                ],
-              ),
+              onSelect: (index) {
+                context.go(chronosSections[index].route);
+                if (!_isCollapsed) {
+                  setState(() {
+                    _isCollapsed = true;
+                  });
+                }
+              },
             ),
           ],
         ),
@@ -86,8 +113,9 @@ class _SidebarNavigation extends StatelessWidget {
           ? const Color(0xFF0C0F17)
           : const Color(0xFFFBFBFE),
       child: Column(
-        crossAxisAlignment:
-            isCollapsed ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+        crossAxisAlignment: isCollapsed
+            ? CrossAxisAlignment.center
+            : CrossAxisAlignment.start,
         children: [
           if (!isCollapsed)
             Text(
@@ -98,10 +126,7 @@ class _SidebarNavigation extends StatelessWidget {
               ),
             ),
           if (isCollapsed)
-            Icon(
-              Icons.watch_later,
-              color: ChronosTheme.focusAccent,
-            ),
+            Icon(Icons.watch_later, color: ChronosTheme.focusAccent),
           const SizedBox(height: 24),
           ...List.generate(chronosSections.length, (index) {
             final section = chronosSections[index];
@@ -126,9 +151,10 @@ class _SidebarNavigation extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: 0.4,
                     minHeight: 6,
-                    backgroundColor: theme.dividerColor.withOpacity(.3),
-                    valueColor:
-                        AlwaysStoppedAnimation(ChronosTheme.focusAccent),
+                    backgroundColor: theme.dividerColor.withOpacity(0.3),
+                    valueColor: AlwaysStoppedAnimation(
+                      ChronosTheme.focusAccent,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -138,6 +164,8 @@ class _SidebarNavigation extends StatelessWidget {
           ],
           const SizedBox(height: 24),
           IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
             onPressed: onToggle,
             icon: Icon(
               isCollapsed
@@ -174,51 +202,65 @@ class _NavTile extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 12, horizontal: isCollapsed ? 8 : 14),
+        padding: EdgeInsets.symmetric(
+          vertical: 12,
+          horizontal: isCollapsed ? 8 : 14,
+        ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           color: isSelected
               ? ChronosTheme.focusAccent.withOpacity(.15)
               : Colors.transparent,
         ),
-        child: Row(
-          mainAxisAlignment:
-              isCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
-          children: [
-            Icon(
-              section.icon,
-              color: isSelected
-                  ? ChronosTheme.focusAccent
-                  : colorScheme.onSurfaceVariant,
-            ),
-            if (!isCollapsed) ...[
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      section.label,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: isSelected
-                            ? ChronosTheme.focusAccent
-                            : colorScheme.onSurface,
-                      ),
-                    ),
-                    Text(
-                      section.description,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+                child: isCollapsed
+                    ? Center(
+                        child: Icon(
+                          section.icon,
+                          color: isSelected
+                              ? ChronosTheme.focusAccent
+                              : colorScheme.onSurfaceVariant,
+                        ),
+                      )
+                                : Row(
+                                    children: [
+                                      Icon(
+                                        section.icon,
+                                        color: isSelected
+                                            ? ChronosTheme.focusAccent
+                                            : colorScheme.onSurfaceVariant,
+                                      ),
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(left: 12),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                section.label,
+                                                style: theme.textTheme.bodyMedium?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: isSelected
+                                                      ? ChronosTheme.focusAccent
+                                                      : colorScheme.onSurface,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                                maxLines: 1,
+                                              ),
+                                              Text(
+                                                section.description,
+                                                style: theme.textTheme.labelSmall?.copyWith(
+                                                  color: colorScheme.onSurfaceVariant,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                                maxLines: 1,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),      ),
     );
   }
 }
@@ -313,7 +355,8 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
                 ButtonSegment(value: _QuickAddType.goal, label: Text('Goal')),
               ],
               selected: {_type},
-              onSelectionChanged: (selection) => setState(() => _type = selection.first),
+              onSelectionChanged: (selection) =>
+                  setState(() => _type = selection.first),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -330,7 +373,9 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
               const SizedBox(height: 12),
               TextField(
                 controller: _goalIdController,
-                decoration: const InputDecoration(labelText: 'Goal ID (optional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Goal ID (optional)',
+                ),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<RecurrencePreset>(
@@ -385,14 +430,16 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
                           firstDate: now,
                           lastDate: now.add(const Duration(days: 730)),
                         );
-                        if (picked != null) setState(() => _recurrenceEndDate = picked);
+                        if (picked != null)
+                          setState(() => _recurrenceEndDate = picked);
                       },
                       child: const Text('Set end'),
                     ),
                     if (_recurrenceEndDate != null)
                       IconButton(
                         tooltip: 'Clear end date',
-                        onPressed: () => setState(() => _recurrenceEndDate = null),
+                        onPressed: () =>
+                            setState(() => _recurrenceEndDate = null),
                         icon: const Icon(Icons.close_rounded),
                       ),
                   ],
@@ -414,7 +461,9 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
                 children: [
                   Expanded(
                     child: Text(
-                      _targetDate != null ? DateFormat.yMMMd().format(_targetDate!) : 'No target date',
+                      _targetDate != null
+                          ? DateFormat.yMMMd().format(_targetDate!)
+                          : 'No target date',
                       style: theme.textTheme.bodyMedium,
                     ),
                   ),
@@ -423,7 +472,9 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
                       final picked = await showDatePicker(
                         context: context,
                         initialDate: DateTime.now(),
-                        firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                        firstDate: DateTime.now().subtract(
+                          const Duration(days: 1),
+                        ),
                         lastDate: DateTime.now().add(const Duration(days: 730)),
                       );
                       if (picked != null) setState(() => _targetDate = picked);
@@ -443,7 +494,13 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
         ),
         FilledButton(
           onPressed: _isSaving ? null : () => _submit(context),
-          child: _isSaving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save'),
+          child: _isSaving
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Save'),
         ),
       ],
     );
@@ -452,7 +509,9 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
   Future<void> _submit(BuildContext context) async {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Title required')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Title required')));
       return;
     }
     setState(() => _isSaving = true);
@@ -466,24 +525,30 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
         );
         await quickAdd.addTask(
           title: title,
-          description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
-          goalId: _goalIdController.text.trim().isEmpty ? null : _goalIdController.text.trim(),
+          description: _descriptionController.text.trim().isEmpty
+              ? null
+              : _descriptionController.text.trim(),
+          goalId: _goalIdController.text.trim().isEmpty
+              ? null
+              : _goalIdController.text.trim(),
           isRecurring: recurrenceRule != null,
           recurrenceRule: recurrenceRule,
         );
       } else {
         await quickAdd.addGoal(
           title: title,
-          description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
+          description: _descriptionController.text.trim().isEmpty
+              ? null
+              : _descriptionController.text.trim(),
           targetDate: _targetDate,
         );
       }
       if (context.mounted) Navigator.of(context).pop();
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save: $error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save: $error')));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

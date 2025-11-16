@@ -47,13 +47,6 @@ class DashboardPage extends ConsumerWidget {
             runSpacing: 24,
             children: [
               SizedBox(
-                width: isWide ? width * .55 : width - 48,
-                child: _TimelineOverview(
-                  tasksAsync: tasksAsync,
-                  subTasksAsync: subTasksAsync,
-                ),
-              ),
-                SizedBox(
                 width: isWide ? width * .35 - 48 : width - 48,
                 child: const _TimeLeftCard(),
               ),
@@ -61,6 +54,14 @@ class DashboardPage extends ConsumerWidget {
                 width: isWide ? width * .35 - 48 : width - 48,
                 child: _GoalsProgress(goalsAsync: goalsAsync),
               ),
+              SizedBox(
+                width: isWide ? width * .55 : width - 48,
+                child: _TimelineOverview(
+                  tasksAsync: tasksAsync,
+                  subTasksAsync: subTasksAsync,
+                ),
+              ),
+
               SizedBox(
                 width: isWide ? width * .4 : width - 48,
                 child: _FocusClockCard(sessionsAsync: sessionsAsync),
@@ -153,16 +154,20 @@ class _AddSubTaskFieldState extends ConsumerState<_AddSubTaskField> {
   Future<void> _submit(BuildContext context) async {
     final title = _controller.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sub-task title required')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Sub-task title required')));
       return;
     }
 
     setState(() => _isSaving = true);
     final subTasks = ref.read(subTaskControllerProvider);
     try {
-      await subTasks.create(taskId: widget.taskId, title: title, sortOrder: widget.nextOrder);
+      await subTasks.create(
+        taskId: widget.taskId,
+        title: title,
+        sortOrder: widget.nextOrder,
+      );
       _controller.clear();
       if (mounted) {
         setState(() {
@@ -191,10 +196,12 @@ class _SubTaskList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: subTasks
-          .map((subTask) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: _SubTaskTile(subTask: subTask),
-              ))
+          .map(
+            (subTask) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: _SubTaskTile(subTask: subTask),
+            ),
+          )
           .toList(),
     );
   }
@@ -212,7 +219,9 @@ class _SubTaskTile extends ConsumerStatefulWidget {
 class _SubTaskTileState extends ConsumerState<_SubTaskTile> {
   bool _isEditing = false;
   bool _isSaving = false;
-  late final TextEditingController _controller = TextEditingController(text: widget.subTask.title);
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.subTask.title,
+  );
 
   @override
   void dispose() {
@@ -230,7 +239,8 @@ class _SubTaskTileState extends ConsumerState<_SubTaskTile> {
       children: [
         Checkbox(
           value: subTask.isCompleted,
-          onChanged: (value) => controller.toggleCompletion(subTask.id, value ?? false),
+          onChanged: (value) =>
+              controller.toggleCompletion(subTask.id, value ?? false),
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           visualDensity: VisualDensity.compact,
         ),
@@ -250,8 +260,12 @@ class _SubTaskTileState extends ConsumerState<_SubTaskTile> {
             child: Text(
               subTask.title,
               style: theme.textTheme.bodyMedium?.copyWith(
-                decoration: subTask.isCompleted ? TextDecoration.lineThrough : null,
-                color: subTask.isCompleted ? theme.colorScheme.onSurfaceVariant : null,
+                decoration: subTask.isCompleted
+                    ? TextDecoration.lineThrough
+                    : null,
+                color: subTask.isCompleted
+                    ? theme.colorScheme.onSurfaceVariant
+                    : null,
               ),
             ),
           ),
@@ -260,7 +274,11 @@ class _SubTaskTileState extends ConsumerState<_SubTaskTile> {
             tooltip: 'Save',
             onPressed: _isSaving ? null : () => _save(context),
             icon: _isSaving
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Icon(Icons.check_rounded, size: 18),
           )
         else
@@ -286,7 +304,10 @@ class _SubTaskTileState extends ConsumerState<_SubTaskTile> {
                   }
                   await controller.delete(subTask.id);
                 },
-          icon: Icon(_isEditing ? Icons.close_rounded : Icons.delete_outline_rounded, size: 18),
+          icon: Icon(
+            _isEditing ? Icons.close_rounded : Icons.delete_outline_rounded,
+            size: 18,
+          ),
         ),
       ],
     );
@@ -295,12 +316,16 @@ class _SubTaskTileState extends ConsumerState<_SubTaskTile> {
   Future<void> _save(BuildContext context) async {
     final title = _controller.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Title required')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Title required')));
       return;
     }
     setState(() => _isSaving = true);
     try {
-      await ref.read(subTaskControllerProvider).rename(widget.subTask.id, title);
+      await ref
+          .read(subTaskControllerProvider)
+          .rename(widget.subTask.id, title);
       if (mounted) {
         setState(() {
           _isSaving = false;
@@ -310,16 +335,19 @@ class _SubTaskTileState extends ConsumerState<_SubTaskTile> {
     } catch (error) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to rename: $error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to rename: $error')));
       }
     }
   }
 }
 
 class _TimelineOverview extends StatelessWidget {
-  const _TimelineOverview({required this.tasksAsync, required this.subTasksAsync});
+  const _TimelineOverview({
+    required this.tasksAsync,
+    required this.subTasksAsync,
+  });
 
   final AsyncValue<List<Task>> tasksAsync;
   final AsyncValue<List<SubTask>> subTasksAsync;
@@ -391,7 +419,11 @@ class _TimelineOverview extends StatelessWidget {
 }
 
 class _BucketGroup extends StatelessWidget {
-  const _BucketGroup({required this.bucket, required this.tasks, required this.subTasksByTask});
+  const _BucketGroup({
+    required this.bucket,
+    required this.tasks,
+    required this.subTasksByTask,
+  });
 
   final TimelineBucket bucket;
   final List<Task> tasks;
@@ -450,7 +482,11 @@ class _BucketGroup extends StatelessWidget {
 }
 
 class _TimelineTile extends StatelessWidget {
-  const _TimelineTile({required this.task, required this.bucket, required this.subTasks});
+  const _TimelineTile({
+    required this.task,
+    required this.bucket,
+    required this.subTasks,
+  });
 
   final Task task;
   final TimelineBucket bucket;
@@ -463,7 +499,9 @@ class _TimelineTile extends StatelessWidget {
         ? DateFormat('MMM d · h:mm a').format(task.dueDate!)
         : 'No due date';
     final bucketColor = bucket.color;
-    final progress = subTasks.isNotEmpty ? subTaskCompletionProgress(subTasks) : taskProgress(task);
+    final progress = subTasks.isNotEmpty
+        ? subTaskCompletionProgress(subTasks)
+        : taskProgress(task);
     final priority = priorityFromInt(task.priority);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -490,20 +528,33 @@ class _TimelineTile extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 8),
                   child: Tooltip(
                     message: 'Recurring task',
-                    child: Icon(Icons.autorenew_rounded, size: 18, color: bucketColor),
+                    child: Icon(
+                      Icons.autorenew_rounded,
+                      size: 18,
+                      color: bucketColor,
+                    ),
                   ),
                 ),
               _PriorityChip(priority: priority),
               const SizedBox(width: 8),
-              Consumer(builder: (context, ref, _) {
-                final taskController = ref.read(taskControllerProvider);
-                final isCompleted = task.status >= taskStatusCompleted;
-                return IconButton(
-                  tooltip: isCompleted ? 'Completed' : 'Mark complete',
-                  onPressed: isCompleted ? null : () => taskController.completeTask(task),
-                  icon: Icon(isCompleted ? Icons.check_circle : Icons.radio_button_unchecked, color: isCompleted ? bucketColor : null),
-                );
-              }),
+              Consumer(
+                builder: (context, ref, _) {
+                  final taskController = ref.read(taskControllerProvider);
+                  final isCompleted = task.status >= taskStatusCompleted;
+                  return IconButton(
+                    tooltip: isCompleted ? 'Completed' : 'Mark complete',
+                    onPressed: isCompleted
+                        ? null
+                        : () => taskController.completeTask(task),
+                    icon: Icon(
+                      isCompleted
+                          ? Icons.check_circle
+                          : Icons.radio_button_unchecked,
+                      color: isCompleted ? bucketColor : null,
+                    ),
+                  );
+                },
+              ),
             ],
           ),
           if (task.projectId != null)
@@ -608,12 +659,12 @@ class _GoalsProgress extends StatelessWidget {
           child: goals.isEmpty
               ? const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text('No goals yet. Create one to start tracking progress.'),
+                  child: Text(
+                    'No goals yet. Create one to start tracking progress.',
+                  ),
                 )
               : Column(
-                  children: goals
-                      .map((goal) => _GoalTile(goal: goal))
-                      .toList(),
+                  children: goals.map((goal) => _GoalTile(goal: goal)).toList(),
                 ),
         );
       },
@@ -644,7 +695,10 @@ class _GoalTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = Color(goal.colorHex);
-    final progress = ((goal.progressOverride ?? 0.0).clamp(0.0, 1.0)).toDouble();
+    final progress = ((goal.progressOverride ?? 0.0).clamp(
+      0.0,
+      1.0,
+    )).toDouble();
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -714,11 +768,15 @@ class _FocusClockCard extends ConsumerWidget {
         final displayLabel = sessionLabel(referenceSession);
         final targetMinutes = sessionTargetMinutes(referenceSession);
         final recentSessions = sorted.take(3).toList();
-        final focusController = ref.read(focusSessionControllerProvider.notifier);
+        final focusController = ref.read(
+          focusSessionControllerProvider.notifier,
+        );
 
         return SectionCard(
           title: 'Time Clock',
-          subtitle: activeSession != null ? 'In focus now' : 'Current focus session',
+          subtitle: activeSession != null
+              ? 'In focus now'
+              : 'Current focus session',
           trailing: OutlinedButton.icon(
             onPressed: () {},
             icon: const Icon(Icons.more_horiz),
@@ -735,7 +793,10 @@ class _FocusClockCard extends ConsumerWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(displayLabel, style: theme.textTheme.titleMedium),
+                          Text(
+                            displayLabel,
+                            style: theme.textTheme.titleMedium,
+                          ),
                           const SizedBox(height: 6),
                           Text(
                             displayDuration,
@@ -745,7 +806,9 @@ class _FocusClockCard extends ConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            targetMinutes != null ? 'of $targetMinutes mins' : 'No target',
+                            targetMinutes != null
+                                ? 'of $targetMinutes mins'
+                                : 'No target',
                             style: theme.textTheme.labelMedium,
                           ),
                         ],
@@ -767,12 +830,23 @@ class _FocusClockCard extends ConsumerWidget {
                           focusController.startSession();
                         }
                       },
-                      icon: Icon(activeSession != null ? Icons.pause_rounded : Icons.play_arrow_rounded),
-                      label: Text(activeSession != null ? 'Pause Session' : 'Start Session'),
+                      icon: Icon(
+                        activeSession != null
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                      ),
+                      label: Text(
+                        activeSession != null
+                            ? 'Pause Session'
+                            : 'Start Session',
+                      ),
                     ),
                     const SizedBox(height: 16),
                     if (recentSessions.isEmpty)
-                      Text('No focus sessions logged yet.', style: theme.textTheme.bodySmall)
+                      Text(
+                        'No focus sessions logged yet.',
+                        style: theme.textTheme.bodySmall,
+                      )
                     else
                       ...recentSessions.map(
                         (session) => _FocusSummaryTile(session: session),
@@ -983,17 +1057,32 @@ class _TimeLeftCard extends StatelessWidget {
     }
 
     final now = DateTime.now();
-    final endOfDay = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
-    final endOfWeek = DateTime(now.year, now.month, now.day)
-        .subtract(Duration(days: now.weekday - 1))
-        .add(const Duration(days: 7));
+    final endOfDay = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).add(const Duration(days: 1));
+    final endOfWeek = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: now.weekday - 1)).add(const Duration(days: 7));
     final endOfMonth = (now.month < 12)
         ? DateTime(now.year, now.month + 1, 1)
         : DateTime(now.year + 1, 1, 1);
 
-    final minutesTodayLeft = endOfDay.difference(now).inMinutes.clamp(0, 24 * 60);
-    final minutesWeekLeft = endOfWeek.difference(now).inMinutes.clamp(0, 7 * 24 * 60);
-    final minutesMonthLeft = endOfMonth.difference(now).inMinutes.clamp(0, 31 * 24 * 60);
+    final minutesTodayLeft = endOfDay
+        .difference(now)
+        .inMinutes
+        .clamp(0, 24 * 60);
+    final minutesWeekLeft = endOfWeek
+        .difference(now)
+        .inMinutes
+        .clamp(0, 7 * 24 * 60);
+    final minutesMonthLeft = endOfMonth
+        .difference(now)
+        .inMinutes
+        .clamp(0, 31 * 24 * 60);
 
     String fmtDaysHours(int minutes) {
       final days = minutes ~/ (60 * 24);
@@ -1003,7 +1092,13 @@ class _TimeLeftCard extends StatelessWidget {
       return '${minutes}m';
     }
 
-  Widget buildRow(String label, int filled, int total, String subtitle, {bool wrap = true}) {
+    Widget buildRow(
+      String label,
+      int filled,
+      int total,
+      String subtitle, {
+      bool wrap = true,
+    }) {
       final color = ChronosTheme.focusAccent;
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1012,7 +1107,12 @@ class _TimeLeftCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(label, style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
+                Text(
+                  label,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const Spacer(),
                 Text(subtitle, style: theme.textTheme.labelMedium),
               ],
@@ -1023,13 +1123,15 @@ class _TimeLeftCard extends StatelessWidget {
                 children: List.generate(total, (index) {
                   final isFilled = index < filled;
                   return Padding(
-                      padding: const EdgeInsets.only(right: 4),
-                      child: Container(
-                        width: 6,
-                        height: 6,
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Container(
+                      width: 6,
+                      height: 6,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(3),
-                        color: isFilled ? color : theme.colorScheme.onSurface.withOpacity(.12),
+                        color: isFilled
+                            ? color
+                            : theme.colorScheme.onSurface.withOpacity(.12),
                       ),
                     ),
                   );
@@ -1046,7 +1148,9 @@ class _TimeLeftCard extends StatelessWidget {
                     height: 6,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(3),
-                      color: isFilled ? color : theme.colorScheme.onSurface.withOpacity(.12),
+                      color: isFilled
+                          ? color
+                          : theme.colorScheme.onSurface.withOpacity(.12),
                     ),
                   );
                 }),
@@ -1062,8 +1166,20 @@ class _TimeLeftCard extends StatelessWidget {
       child: Column(
         children: [
           buildRow('Today', todayDots, _dotCount, fmtMinutes(minutesTodayLeft)),
-          buildRow('Week', weekDots, _dotCount, fmtDaysHours(minutesWeekLeft), wrap: true),
-          buildRow('Month', monthDots, _dotCount, fmtDaysHours(minutesMonthLeft), wrap: true),
+          buildRow(
+            'Week',
+            weekDots,
+            _dotCount,
+            fmtDaysHours(minutesWeekLeft),
+            wrap: true,
+          ),
+          buildRow(
+            'Month',
+            monthDots,
+            _dotCount,
+            fmtDaysHours(minutesMonthLeft),
+            wrap: true,
+          ),
         ],
       ),
     );

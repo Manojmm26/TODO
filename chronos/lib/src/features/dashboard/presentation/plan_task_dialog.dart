@@ -18,7 +18,7 @@ class _PlanTaskDialogState extends ConsumerState<PlanTaskDialog> {
   final _descriptionController = TextEditingController();
   final _goalIdController = TextEditingController();
   final _customRecurrenceController = TextEditingController();
-  
+
   TimelineBucket _bucket = TimelineBucket.today;
   DateTime? _explicitDueDate;
   RecurrencePreset _recurrencePreset = RecurrencePreset.none;
@@ -89,11 +89,14 @@ class _PlanTaskDialogState extends ConsumerState<PlanTaskDialog> {
                     final now = DateTime.now();
                     final picked = await showDatePicker(
                       context: context,
-                      initialDate: _explicitDueDate ?? _suggestedDueDate(_bucket) ?? now,
+                      initialDate:
+                          _explicitDueDate ?? _suggestedDueDate(_bucket) ?? now,
                       firstDate: now.subtract(const Duration(days: 1)),
                       lastDate: now.add(const Duration(days: 365)),
                     );
-                    if (picked != null) setState(() => _explicitDueDate = picked);
+                    if (picked != null) {
+                      setState(() => _explicitDueDate = picked);
+                    }
                   },
                   child: const Text('Set due date'),
                 ),
@@ -108,7 +111,9 @@ class _PlanTaskDialogState extends ConsumerState<PlanTaskDialog> {
             const SizedBox(height: 12),
             TextField(
               controller: _goalIdController,
-              decoration: const InputDecoration(labelText: 'Goal ID (optional)'),
+              decoration: const InputDecoration(
+                labelText: 'Goal ID (optional)',
+              ),
             ),
             const SizedBox(height: 12),
             Align(
@@ -117,7 +122,7 @@ class _PlanTaskDialogState extends ConsumerState<PlanTaskDialog> {
             ),
             const SizedBox(height: 6),
             DropdownButtonFormField<RecurrencePreset>(
-              value: _recurrencePreset,
+              initialValue: _recurrencePreset,
               decoration: const InputDecoration(labelText: 'Repeats'),
               items: RecurrencePreset.values
                   .map(
@@ -177,7 +182,8 @@ class _PlanTaskDialogState extends ConsumerState<PlanTaskDialog> {
                   if (_recurrenceEndDate != null)
                     IconButton(
                       tooltip: 'Clear end date',
-                      onPressed: () => setState(() => _recurrenceEndDate = null),
+                      onPressed: () =>
+                          setState(() => _recurrenceEndDate = null),
                       icon: const Icon(Icons.close_rounded),
                     ),
                 ],
@@ -204,7 +210,11 @@ class _PlanTaskDialogState extends ConsumerState<PlanTaskDialog> {
         FilledButton.icon(
           onPressed: _isSaving ? null : () => _submit(context),
           icon: _isSaving
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
               : const Icon(Icons.save_rounded),
           label: const Text('Save'),
         ),
@@ -216,26 +226,30 @@ class _PlanTaskDialogState extends ConsumerState<PlanTaskDialog> {
     final title = _titleController.text.trim();
 
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Title required')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Title required')));
       return;
     }
-final recurrenceRule = buildRecurrenceRule(
-  _recurrencePreset,
-  endDate: _recurrenceEndDate,
-  customRule: _customRecurrenceController.text,
-);
-final isRecurring = recurrenceRule != null;
-if (isRecurring) {
-  debugPrint('Recurrence Rule: $recurrenceRule');
-  if (!isValidRecurrenceRule(recurrenceRule)) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Invalid recurrence rule format. Please check your rule syntax.'),
-      ),
+    final recurrenceRule = buildRecurrenceRule(
+      _recurrencePreset,
+      endDate: _recurrenceEndDate,
+      customRule: _customRecurrenceController.text,
     );
-    return;
-  }
-}
+    final isRecurring = recurrenceRule != null;
+    if (isRecurring) {
+      debugPrint('Recurrence Rule: $recurrenceRule');
+      if (!isValidRecurrenceRule(recurrenceRule)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Invalid recurrence rule format. Please check your rule syntax.',
+            ),
+          ),
+        );
+        return;
+      }
+    }
     setState(() => _isSaving = true);
     final quickAdd = ref.read(quickAddControllerProvider);
     final dueDate = _explicitDueDate ?? _suggestedDueDate(_bucket);
@@ -243,8 +257,12 @@ if (isRecurring) {
     try {
       await quickAdd.addTask(
         title: title,
-        description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
-        goalId: _goalIdController.text.trim().isEmpty ? null : _goalIdController.text.trim(),
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+        goalId: _goalIdController.text.trim().isEmpty
+            ? null
+            : _goalIdController.text.trim(),
         dueDate: dueDate,
         startDate: flags.startDate,
         flagImmediate: flags.flagImmediate,
@@ -256,9 +274,9 @@ if (isRecurring) {
       if (context.mounted) Navigator.of(context).pop();
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to plan task: $error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to plan task: $error')));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -284,9 +302,20 @@ if (isRecurring) {
   _BucketFlags _bucketFlags(TimelineBucket bucket) {
     final now = DateTime.now();
     return switch (bucket) {
-      TimelineBucket.immediate => _BucketFlags(flagImmediate: true, priority: 0, startDate: now),
-      TimelineBucket.today => _BucketFlags(flagToday: true, priority: 1, startDate: now),
-      TimelineBucket.upcoming => _BucketFlags(priority: 1, startDate: now.add(const Duration(days: 1))),
+      TimelineBucket.immediate => _BucketFlags(
+        flagImmediate: true,
+        priority: 0,
+        startDate: now,
+      ),
+      TimelineBucket.today => _BucketFlags(
+        flagToday: true,
+        priority: 1,
+        startDate: now,
+      ),
+      TimelineBucket.upcoming => _BucketFlags(
+        priority: 1,
+        startDate: now.add(const Duration(days: 1)),
+      ),
       TimelineBucket.backlog => const _BucketFlags(priority: 2),
     };
   }

@@ -15,7 +15,7 @@ void main() {
   testWidgets('Chronos app renders dashboard shell', (tester) async {
     // Give the test a large enough viewport to avoid layout overflows when
     // the dashboard has many side-by-side sections.
-  tester.binding.window.physicalSizeTestValue = const Size(3200, 2200);
+    tester.binding.window.physicalSizeTestValue = const Size(3200, 2200);
     addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
     await tester.pumpWidget(const ProviderScope(child: ChronosApp()));
 

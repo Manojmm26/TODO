@@ -15,10 +15,13 @@ final quickAddControllerProvider = Provider<QuickAddController>((ref) {
 });
 
 class QuickAddController {
-  QuickAddController({required TaskRepository tasks, required GoalRepository goals, required SubTaskRepository subTasks})
-      : _tasks = tasks,
-        _goals = goals,
-        _subTasks = subTasks;
+  QuickAddController({
+    required TaskRepository tasks,
+    required GoalRepository goals,
+    required SubTaskRepository subTasks,
+  }) : _tasks = tasks,
+       _goals = goals,
+       _subTasks = subTasks;
 
   final TaskRepository _tasks;
   final GoalRepository _goals;
@@ -49,14 +52,20 @@ class QuickAddController {
       flagToday: Value(flagToday),
       priority: priority != null ? Value(priority) : const Value.absent(),
       isRecurring: Value(isRecurring),
-      recurrenceRule: recurrenceRule != null ? Value(recurrenceRule) : const Value.absent(),
+      recurrenceRule: recurrenceRule != null
+          ? Value(recurrenceRule)
+          : const Value.absent(),
       createdAt: Value(DateTime.now()),
       updatedAt: Value(DateTime.now()),
     );
     return _tasks.upsert(companion);
   }
 
-  Future<void> addGoal({required String title, String? description, DateTime? targetDate}) {
+  Future<void> addGoal({
+    required String title,
+    String? description,
+    DateTime? targetDate,
+  }) {
     final companion = GoalsCompanion(
       id: Value(_uuid.v4()),
       title: Value(title),
@@ -68,7 +77,11 @@ class QuickAddController {
     return _goals.upsert(companion);
   }
 
-  Future<void> addSubTask({required String taskId, required String title, int? sortOrder}) {
+  Future<void> addSubTask({
+    required String taskId,
+    required String title,
+    int? sortOrder,
+  }) {
     final companion = SubTasksCompanion(
       id: Value(_uuid.v4()),
       taskId: Value(taskId),

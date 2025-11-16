@@ -1,28 +1,61 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../dashboard/data/dashboard_models.dart';
 
-final timelineBucketFilterProvider = StateNotifierProvider<TimelineBucketFilterController, Set<TimelineBucket>>(
-  (ref) => TimelineBucketFilterController(),
-);
+class TimelineFilters {
+  const TimelineFilters({
+    this.buckets = const {...TimelineBucket.values},
+    this.dateRange,
+  });
 
-class TimelineBucketFilterController extends StateNotifier<Set<TimelineBucket>> {
-  TimelineBucketFilterController()
-      : super({
-          ...TimelineBucket.values,
-        });
+  final Set<TimelineBucket> buckets;
+  final DateTimeRange? dateRange;
 
-  void toggle(TimelineBucket bucket) {
-    final next = {...state};
-    if (next.contains(bucket)) {
-      next.remove(bucket);
+  TimelineFilters copyWith({
+    Set<TimelineBucket>? buckets,
+    DateTimeRange? dateRange,
+  }) => TimelineFilters(
+    buckets: buckets ?? this.buckets,
+    dateRange: dateRange ?? this.dateRange,
+  );
+}
+
+final timelineFilterProvider =
+    StateNotifierProvider<TimelineFilterController, TimelineFilters>(
+      (ref) => TimelineFilterController(),
+    );
+
+class TimelineFilterController extends StateNotifier<TimelineFilters> {
+  TimelineFilterController() : super(const TimelineFilters());
+
+  void toggleBucket(TimelineBucket bucket) {
+    final nextBuckets = Set<TimelineBucket>.from(state.buckets);
+    if (nextBuckets.contains(bucket)) {
+      nextBuckets.remove(bucket);
     } else {
-      next.add(bucket);
+      nextBuckets.add(bucket);
     }
-    state = next.isEmpty ? {...TimelineBucket.values} : next;
+    state = state.copyWith(
+      buckets: nextBuckets.isEmpty
+          ? const {...TimelineBucket.values}
+          : nextBuckets,
+    );
   }
 
-  void selectAll() => state = {...TimelineBucket.values};
+  void selectAllBuckets() {
+    state = state.copyWith(buckets: const {...TimelineBucket.values});
+  }
 
-  void clear() => state = {};
+  void clearBuckets() {
+    state = state.copyWith(buckets: const <TimelineBucket>{});
+  }
+
+  void setDateRange(DateTimeRange? range) {
+    state = state.copyWith(dateRange: range);
+  }
+
+  void clearDateRange() {
+    state = state.copyWith(dateRange: null);
+  }
 }

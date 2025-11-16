@@ -12,9 +12,11 @@ final taskControllerProvider = Provider<TaskController>((ref) {
 });
 
 class TaskController {
-  TaskController({required TaskRepository tasks, required RecurrenceCoordinator recurrence})
-      : _tasks = tasks,
-        _recurrence = recurrence;
+  TaskController({
+    required TaskRepository tasks,
+    required RecurrenceCoordinator recurrence,
+  }) : _tasks = tasks,
+       _recurrence = recurrence;
 
   final TaskRepository _tasks;
   final RecurrenceCoordinator _recurrence;

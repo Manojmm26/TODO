@@ -7,9 +7,10 @@ import '../data/repositories/chronos_repositories.dart';
 
 final _uuid = const Uuid();
 
-final focusSessionControllerProvider = AsyncNotifierProvider<FocusSessionController, FocusSession?>(
-  FocusSessionController.new,
-);
+final focusSessionControllerProvider =
+    AsyncNotifierProvider<FocusSessionController, FocusSession?>(
+      FocusSessionController.new,
+    );
 
 class FocusSessionController extends AsyncNotifier<FocusSession?> {
   @override
@@ -18,7 +19,12 @@ class FocusSessionController extends AsyncNotifier<FocusSession?> {
     return repository.activeSession();
   }
 
-  Future<void> startSession({String? taskId, String? projectId, int targetMinutes = 30, String? notes}) async {
+  Future<void> startSession({
+    String? taskId,
+    String? projectId,
+    int targetMinutes = 30,
+    String? notes,
+  }) async {
     final repository = ref.read(focusRepositoryProvider);
     final session = FocusSessionsCompanion(
       id: Value(_uuid.v4()),

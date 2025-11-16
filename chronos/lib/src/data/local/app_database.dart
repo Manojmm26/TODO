@@ -41,7 +41,8 @@ class Tasks extends Table {
   TextColumn get id => text()();
   TextColumn get projectId => text().nullable().references(Projects, #id)();
   TextColumn get goalId => text().nullable().references(Goals, #id)();
-  TextColumn get parentRecurringId => text().nullable().references(Tasks, #id)();
+  TextColumn get parentRecurringId =>
+      text().nullable().references(Tasks, #id)();
   TextColumn get title => text()();
   TextColumn get description => text().nullable()();
   IntColumn get status => integer().withDefault(const Constant(0))();
@@ -53,7 +54,8 @@ class Tasks extends Table {
   IntColumn get actualMinutes => integer().withDefault(const Constant(0))();
   BoolColumn get isRecurring => boolean().withDefault(const Constant(false))();
   TextColumn get recurrenceRule => text().nullable()();
-  BoolColumn get flagImmediate => boolean().withDefault(const Constant(false))();
+  BoolColumn get flagImmediate =>
+      boolean().withDefault(const Constant(false))();
   BoolColumn get flagToday => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
@@ -110,7 +112,8 @@ class DigestSnapshots extends Table {
   IntColumn get completedTasks => integer().withDefault(const Constant(0))();
   IntColumn get focusMinutes => integer().withDefault(const Constant(0))();
   IntColumn get upcomingDeadlines => integer().withDefault(const Constant(0))();
-  RealColumn get weeklyGoalCompletion => real().withDefault(const Constant(0.0))();
+  RealColumn get weeklyGoalCompletion =>
+      real().withDefault(const Constant(0.0))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -160,8 +163,10 @@ class GoalDao extends DatabaseAccessor<ChronosDatabase> {
 
   Stream<List<Goal>> watchGoals() => select(goals).watch();
   Future<List<Goal>> getGoals() => select(goals).get();
-  Future<void> upsertGoal(GoalsCompanion goal) => into(goals).insertOnConflictUpdate(goal);
-  Future<int> deleteGoal(String id) => (delete(goals)..where((tbl) => tbl.id.equals(id))).go();
+  Future<void> upsertGoal(GoalsCompanion goal) =>
+      into(goals).insertOnConflictUpdate(goal);
+  Future<int> deleteGoal(String id) =>
+      (delete(goals)..where((tbl) => tbl.id.equals(id))).go();
 }
 
 @DriftAccessor(tables: [Projects])
@@ -171,8 +176,10 @@ class ProjectDao extends DatabaseAccessor<ChronosDatabase> {
   $ProjectsTable get projects => attachedDatabase.projects;
 
   Stream<List<Project>> watchProjects() => select(projects).watch();
-  Future<void> upsertProject(ProjectsCompanion project) => into(projects).insertOnConflictUpdate(project);
-  Future<int> deleteProject(String id) => (delete(projects)..where((tbl) => tbl.id.equals(id))).go();
+  Future<void> upsertProject(ProjectsCompanion project) =>
+      into(projects).insertOnConflictUpdate(project);
+  Future<int> deleteProject(String id) =>
+      (delete(projects)..where((tbl) => tbl.id.equals(id))).go();
 }
 
 @DriftAccessor(tables: [Tasks])
@@ -188,25 +195,43 @@ class TaskDao extends DatabaseAccessor<ChronosDatabase> {
     return query.get();
   }
 
-  Future<void> upsertTask(TasksCompanion task) => into(tasks).insertOnConflictUpdate(task);
+  Future<void> upsertTask(TasksCompanion task) =>
+      into(tasks).insertOnConflictUpdate(task);
   Future<void> updateTask(String id, TasksCompanion task) {
     assert(!task.id.present, 'Do not include an id when updating a task');
-    return (update(tasks)..where((tbl) => tbl.id.equals(id))).write(task).then((_) => null);
+    return (update(
+      tasks,
+    )..where((tbl) => tbl.id.equals(id))).write(task).then((_) => null);
   }
-  Future<int> deleteTask(String id) => (delete(tasks)..where((tbl) => tbl.id.equals(id))).go();
 
-  Future<Task?> taskById(String id) => (select(tasks)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+  Future<int> deleteTask(String id) =>
+      (delete(tasks)..where((tbl) => tbl.id.equals(id))).go();
+
+  Future<Task?> taskById(String id) =>
+      (select(tasks)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
 
   Future<List<Task>> recurringSourceTasks() {
-    return (select(tasks)
-          ..where((tbl) => tbl.isRecurring.equals(true) & tbl.parentRecurringId.isNull()))
+    return (select(tasks)..where(
+          (tbl) =>
+              tbl.isRecurring.equals(true) & tbl.parentRecurringId.isNull(),
+        ))
         .get();
   }
 
-  Future<List<Task>> seriesForTemplate(String templateId) => (select(tasks)
-        ..where((tbl) => tbl.id.equals(templateId) | tbl.parentRecurringId.equals(templateId))
-        ..orderBy([(tbl) => OrderingTerm(expression: tbl.dueDate, mode: OrderingMode.desc)]))
-      .get();
+  Future<List<Task>> seriesForTemplate(String templateId) =>
+      (select(tasks)
+            ..where(
+              (tbl) =>
+                  tbl.id.equals(templateId) |
+                  tbl.parentRecurringId.equals(templateId),
+            )
+            ..orderBy([
+              (tbl) => OrderingTerm(
+                expression: tbl.dueDate,
+                mode: OrderingMode.desc,
+              ),
+            ]))
+          .get();
 }
 
 @DriftAccessor(tables: [SubTasks])
@@ -221,9 +246,11 @@ class SubTaskDao extends DatabaseAccessor<ChronosDatabase> {
     return (select(subTasks)..where((tbl) => tbl.taskId.equals(taskId))).get();
   }
 
-  Future<void> upsertSubTask(SubTasksCompanion subTask) => into(subTasks).insertOnConflictUpdate(subTask);
+  Future<void> upsertSubTask(SubTasksCompanion subTask) =>
+      into(subTasks).insertOnConflictUpdate(subTask);
 
-  Future<int> deleteSubTask(String id) => (delete(subTasks)..where((tbl) => tbl.id.equals(id))).go();
+  Future<int> deleteSubTask(String id) =>
+      (delete(subTasks)..where((tbl) => tbl.id.equals(id))).go();
 
   Future<void> toggleCompletion(String id, bool isCompleted) {
     return (update(subTasks)..where((tbl) => tbl.id.equals(id))).write(
@@ -239,7 +266,8 @@ class FocusSessionDao extends DatabaseAccessor<ChronosDatabase> {
   $FocusSessionsTable get focusSessions => attachedDatabase.focusSessions;
 
   Stream<List<FocusSession>> watchSessions() => select(focusSessions).watch();
-  Future<void> logSession(FocusSessionsCompanion session) => into(focusSessions).insert(session);
+  Future<void> logSession(FocusSessionsCompanion session) =>
+      into(focusSessions).insert(session);
   Future<FocusSession?> activeSession() {
     final query = select(focusSessions)
       ..where((tbl) => tbl.endedAt.isNull())
@@ -262,7 +290,8 @@ class TagDao extends DatabaseAccessor<ChronosDatabase> {
   $TagsTable get tags => attachedDatabase.tags;
 
   Stream<List<Tag>> watchTags() => select(tags).watch();
-  Future<void> upsertTag(TagsCompanion tag) => into(tags).insertOnConflictUpdate(tag);
+  Future<void> upsertTag(TagsCompanion tag) =>
+      into(tags).insertOnConflictUpdate(tag);
 }
 
 @DriftAccessor(tables: [DigestSnapshots])
@@ -271,7 +300,8 @@ class DigestDao extends DatabaseAccessor<ChronosDatabase> {
 
   $DigestSnapshotsTable get digestSnapshots => attachedDatabase.digestSnapshots;
 
-  Stream<List<DigestSnapshot>> watchSnapshots() => select(digestSnapshots).watch();
+  Stream<List<DigestSnapshot>> watchSnapshots() =>
+      select(digestSnapshots).watch();
   Future<void> upsertSnapshot(DigestSnapshotsCompanion snapshot) =>
       into(digestSnapshots).insertOnConflictUpdate(snapshot);
 }

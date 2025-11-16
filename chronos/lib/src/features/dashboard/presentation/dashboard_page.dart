@@ -462,9 +462,28 @@ class _BucketGroup extends StatelessWidget {
           if (tasks.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                'No tasks in this bucket yet',
-                style: theme.textTheme.labelMedium,
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.inbox_outlined,
+                    size: 48,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No tasks in ${bucket.label.toLowerCase()} yet',
+                    style: theme.textTheme.labelMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton.icon(
+                    onPressed: () => showDialog(
+                      context: context,
+                      builder: (_) => const PlanTaskDialog(),
+                    ),
+                    icon: const Icon(Icons.add_task_rounded, size: 16),
+                    label: const Text('Plan a task'),
+                  ),
+                ],
               ),
             )
           else
@@ -647,6 +666,7 @@ class _GoalsProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return goalsAsync.when(
       data: (goals) {
         return SectionCard(
@@ -657,10 +677,29 @@ class _GoalsProgress extends StatelessWidget {
             icon: const Icon(Icons.analytics_rounded),
           ),
           child: goals.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    'No goals yet. Create one to start tracking progress.',
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 8,
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.flag_outlined,
+                        size: 48,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'No goals yet. Create one to start tracking progress.',
+                      ),
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.flag_rounded),
+                        label: const Text('Create goal'),
+                      ),
+                    ],
                   ),
                 )
               : Column(
@@ -843,9 +882,28 @@ class _FocusClockCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 16),
                     if (recentSessions.isEmpty)
-                      Text(
-                        'No focus sessions logged yet.',
-                        style: theme.textTheme.bodySmall,
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.access_time_outlined,
+                              size: 48,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'No focus sessions logged yet.',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 16),
+                            OutlinedButton.icon(
+                              onPressed: () => focusController.startSession(),
+                              icon: const Icon(Icons.play_arrow_rounded),
+                              label: const Text('Start your first'),
+                            ),
+                          ],
+                        ),
                       )
                     else
                       ...recentSessions.map(
@@ -947,7 +1005,7 @@ class _FocusSummaryTile extends StatelessWidget {
               ),
             ),
           ),
-          Text('${durationMinutes} mins', style: theme.textTheme.labelMedium),
+          Text('$durationMinutes mins', style: theme.textTheme.labelMedium),
         ],
       ),
     );
@@ -1036,7 +1094,7 @@ class _DailyDigestCard extends StatelessWidget {
 class _TimeLeftCard extends StatelessWidget {
   const _TimeLeftCard();
 
-  static const _dotCount = 99;
+  static const _dotCount = 108;
 
   @override
   Widget build(BuildContext context) {

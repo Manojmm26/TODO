@@ -6,22 +6,22 @@ enum RecurrencePreset { none, daily, weekdays, weekly, monthly, custom }
 
 extension RecurrencePresetX on RecurrencePreset {
   String get label => switch (this) {
-        RecurrencePreset.none => 'Does not repeat',
-        RecurrencePreset.daily => 'Daily',
-        RecurrencePreset.weekdays => 'Weekdays',
-        RecurrencePreset.weekly => 'Weekly',
-        RecurrencePreset.monthly => 'Monthly',
-        RecurrencePreset.custom => 'Custom',
-      };
+    RecurrencePreset.none => 'Does not repeat',
+    RecurrencePreset.daily => 'Daily',
+    RecurrencePreset.weekdays => 'Weekdays',
+    RecurrencePreset.weekly => 'Weekly',
+    RecurrencePreset.monthly => 'Monthly',
+    RecurrencePreset.custom => 'Custom',
+  };
 
   String get description => switch (this) {
-        RecurrencePreset.none => 'One-time task',
-        RecurrencePreset.daily => 'Repeats every day',
-        RecurrencePreset.weekdays => 'Repeats Monday through Friday',
-        RecurrencePreset.weekly => 'Repeats every week',
-        RecurrencePreset.monthly => 'Repeats every month',
-        RecurrencePreset.custom => 'Use a custom RRULE',
-      };
+    RecurrencePreset.none => 'One-time task',
+    RecurrencePreset.daily => 'Repeats every day',
+    RecurrencePreset.weekdays => 'Repeats Monday through Friday',
+    RecurrencePreset.weekly => 'Repeats every week',
+    RecurrencePreset.monthly => 'Repeats every month',
+    RecurrencePreset.custom => 'Use a custom RRULE',
+  };
 }
 
 String? buildRecurrenceRule(
@@ -69,10 +69,7 @@ String? buildRecurrenceRule(
   return 'RRULE:$ruleWithUntil';
 }
 
-String recurrenceSummary(
-  RecurrencePreset preset, {
-  DateTime? endDate,
-}) {
+String recurrenceSummary(RecurrencePreset preset, {DateTime? endDate}) {
   final buffer = StringBuffer();
   buffer.write(preset.description);
   if (preset == RecurrencePreset.none) {
@@ -93,10 +90,12 @@ String _formatUntil(DateTime date) {
 RecurrencePreset presetFromRule(String? rule) {
   if (rule == null || rule.isEmpty) return RecurrencePreset.none;
   final normalized = rule.toUpperCase();
-  if (normalized.contains('FREQ=DAILY') && !normalized.contains('BYDAY=MO,TU,WE,TH,FR')) {
+  if (normalized.contains('FREQ=DAILY') &&
+      !normalized.contains('BYDAY=MO,TU,WE,TH,FR')) {
     return RecurrencePreset.daily;
   }
-  if (normalized.contains('FREQ=WEEKLY') && normalized.contains('BYDAY=MO,TU,WE,TH,FR')) {
+  if (normalized.contains('FREQ=WEEKLY') &&
+      normalized.contains('BYDAY=MO,TU,WE,TH,FR')) {
     return RecurrencePreset.weekdays;
   }
   if (normalized.contains('FREQ=WEEKLY')) {
@@ -113,19 +112,18 @@ bool isValidRecurrenceRule(String? rule) {
     debugPrint('Rule is null or empty - considered valid');
     return true;
   }
-  
+
   String normalizedRule = rule.trim();
   if (!normalizedRule.startsWith('RRULE:')) {
     normalizedRule = 'RRULE:$normalizedRule';
   }
-  
+
   debugPrint('Validating rule: "$normalizedRule"');
   try {
     final parsed = RecurrenceRule.fromString(normalizedRule);
     debugPrint('Successfully parsed rule: $parsed');
     return true;
-  } catch (e, stackTrace) {
-    debugPrint('Error parsing rule: $e');
+  } catch (e) {
     return false;
   }
 }

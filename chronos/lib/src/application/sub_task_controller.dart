@@ -18,11 +18,16 @@ class SubTaskController {
   final SubTaskRepository _repository;
 
   Stream<List<SubTask>> watchSubTasks() => _repository.watchSubTasks();
-  Future<void> toggleCompletion(String id, bool isCompleted) => _repository.toggleCompletion(id, isCompleted);
+  Future<void> toggleCompletion(String id, bool isCompleted) =>
+      _repository.toggleCompletion(id, isCompleted);
   Future<void> delete(String id) => _repository.delete(id);
   Future<void> rename(String id, String title) =>
       _repository.upsert(SubTasksCompanion(id: Value(id), title: Value(title)));
-  Future<void> create({required String taskId, required String title, int? sortOrder}) {
+  Future<void> create({
+    required String taskId,
+    required String title,
+    int? sortOrder,
+  }) {
     final companion = SubTasksCompanion(
       id: Value(_uuid.v4()),
       taskId: Value(taskId),

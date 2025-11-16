@@ -1,56 +1,131 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../../../application/settings_controller.dart';
 import '../../../shared/widgets/section_card.dart';
 
-class SettingsPage extends StatelessWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../application/providers.dart';
+
+class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
       padding: const EdgeInsets.all(24),
-      children: const [
+      children: [
         SectionCard(
           title: 'Appearance',
           subtitle: 'Toggle light/dark & accents',
           child: _AppearanceSettings(),
         ),
-        SizedBox(height: 24),
+        const SizedBox(height: 24),
         SectionCard(
           title: 'Notifications',
           subtitle: 'Desktop reminders & focus alerts',
           child: _NotificationSettings(),
         ),
-        SizedBox(height: 24),
+        const SizedBox(height: 24),
         SectionCard(
           title: 'System Integration',
           subtitle: 'Startup behavior & data storage',
           child: _SystemSettings(),
+        ),
+        const SizedBox(height: 24),
+        SectionCard(
+          title: 'Data Backup',
+          subtitle: 'Export/Import your preferences',
+          child: Consumer(
+            builder: (context, ref, child) {
+              final settings = ref.watch(settingsProvider);
+              return Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.download),
+                      label: const Text('Export'),
+                      onPressed: () async {
+                        final result = await FilePicker.platform.saveFile(
+                          dialogTitle: 'Save settings.json',
+                          fileName: 'chronos-settings.json',
+                        );
+                        if (result != null) {
+                          final file = File(result);
+                          await file.writeAsString(
+                            json.encode(settings.toJson()),
+                          );
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Settings exported!'),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.upload),
+                      label: const Text('Import'),
+                      onPressed: () async {
+                        final result = await FilePicker.platform.pickFiles(
+                          type: FileType.custom,
+                          allowedExtensions: ['json'],
+                        );
+                        if (result != null &&
+                            result.files.single.path != null) {
+                          final file = File(result.files.single.path!);
+                          final jsonString = await file.readAsString();
+                          final jsonMap =
+                              json.decode(jsonString) as Map<String, dynamic>;
+                          ref.read(settingsProvider.notifier).state =
+                              AppSettings.fromJson(jsonMap);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Settings imported!'),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ],
     );
   }
 }
 
-class _AppearanceSettings extends StatefulWidget {
+class _AppearanceSettings extends ConsumerStatefulWidget {
   const _AppearanceSettings();
 
   @override
-  State<_AppearanceSettings> createState() => _AppearanceSettingsState();
+  ConsumerState<_AppearanceSettings> createState() =>
+      _AppearanceSettingsState();
 }
 
-class _AppearanceSettingsState extends State<_AppearanceSettings> {
-  ThemeMode _mode = ThemeMode.system;
-
+class _AppearanceSettingsState extends ConsumerState<_AppearanceSettings> {
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider);
     return Column(
       children: ThemeMode.values.map((mode) {
         return RadioListTile<ThemeMode>(
           value: mode,
-          groupValue: _mode,
+          groupValue: settings.themeMode,
           onChanged: (value) =>
-              setState(() => _mode = value ?? ThemeMode.system),
+              ref.read(settingsProvider.notifier).updateThemeMode(value!),
           title: Text(mode.name.toUpperCase()),
           subtitle: Text(_labelForMode(mode)),
         );
@@ -65,37 +140,38 @@ class _AppearanceSettingsState extends State<_AppearanceSettings> {
   };
 }
 
-class _NotificationSettings extends StatefulWidget {
+class _NotificationSettings extends ConsumerStatefulWidget {
   const _NotificationSettings();
 
   @override
-  State<_NotificationSettings> createState() => _NotificationSettingsState();
+  ConsumerState<_NotificationSettings> createState() =>
+      _NotificationSettingsState();
 }
 
-class _NotificationSettingsState extends State<_NotificationSettings> {
-  bool _taskReminders = true;
-  bool _focusAlerts = true;
-  bool _digestEmails = false;
-
+class _NotificationSettingsState extends ConsumerState<_NotificationSettings> {
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider);
     return Column(
       children: [
         SwitchListTile.adaptive(
-          value: _taskReminders,
-          onChanged: (value) => setState(() => _taskReminders = value),
+          value: settings.taskReminders,
+          onChanged: (value) =>
+              ref.read(settingsProvider.notifier).updateTaskReminders(value),
           title: const Text('Task reminders'),
           subtitle: const Text('Native desktop notifications before due time'),
         ),
         SwitchListTile.adaptive(
-          value: _focusAlerts,
-          onChanged: (value) => setState(() => _focusAlerts = value),
+          value: settings.focusAlerts,
+          onChanged: (value) =>
+              ref.read(settingsProvider.notifier).updateFocusAlerts(value),
           title: const Text('Focus session alerts'),
           subtitle: const Text('Break + resume prompts during time clock'),
         ),
         SwitchListTile.adaptive(
-          value: _digestEmails,
-          onChanged: (value) => setState(() => _digestEmails = value),
+          value: settings.digestEmails,
+          onChanged: (value) =>
+              ref.read(settingsProvider.notifier).updateDigestEmails(value),
           title: const Text('Weekly digest email'),
           subtitle: const Text('Send a summary of goals & time insights'),
         ),
@@ -104,31 +180,31 @@ class _NotificationSettingsState extends State<_NotificationSettings> {
   }
 }
 
-class _SystemSettings extends StatefulWidget {
+class _SystemSettings extends ConsumerStatefulWidget {
   const _SystemSettings();
 
   @override
-  State<_SystemSettings> createState() => _SystemSettingsState();
+  ConsumerState<_SystemSettings> createState() => _SystemSettingsState();
 }
 
-class _SystemSettingsState extends State<_SystemSettings> {
-  bool _launchAtStartup = true;
-  bool _launchMinimized = false;
-
+class _SystemSettingsState extends ConsumerState<_SystemSettings> {
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SwitchListTile.adaptive(
-          value: _launchAtStartup,
-          onChanged: (value) => setState(() => _launchAtStartup = value),
+          value: settings.launchAtStartup,
+          onChanged: (value) =>
+              ref.read(settingsProvider.notifier).updateLaunchAtStartup(value),
           title: const Text('Launch Chronos when Windows starts'),
           subtitle: const Text('Requires launch_at_startup integration'),
         ),
         SwitchListTile.adaptive(
-          value: _launchMinimized,
-          onChanged: (value) => setState(() => _launchMinimized = value),
+          value: settings.launchMinimized,
+          onChanged: (value) =>
+              ref.read(settingsProvider.notifier).updateLaunchMinimized(value),
           title: const Text('Start minimized in system tray'),
           subtitle: const Text('Keeps dashboard ready without clutter'),
         ),

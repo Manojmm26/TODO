@@ -25,12 +25,15 @@ class TaskRepository {
   final TaskDao _dao;
 
   Stream<List<Task>> watchTasks() => _dao.watchTasks();
-  Future<List<Task>> tasksDueToday(DateTime start, DateTime end) => _dao.tasksDueToday(start, end);
+  Future<List<Task>> tasksDueToday(DateTime start, DateTime end) =>
+      _dao.tasksDueToday(start, end);
   Future<void> upsert(TasksCompanion task) => _dao.upsertTask(task);
-  Future<void> update(String id, TasksCompanion task) => _dao.updateTask(id, task);
+  Future<void> update(String id, TasksCompanion task) =>
+      _dao.updateTask(id, task);
   Future<void> delete(String id) => _dao.deleteTask(id).then((_) => null);
   Future<List<Task>> recurringTemplates() => _dao.recurringSourceTasks();
-  Future<List<Task>> seriesForTemplate(String templateId) => _dao.seriesForTemplate(templateId);
+  Future<List<Task>> seriesForTemplate(String templateId) =>
+      _dao.seriesForTemplate(templateId);
   Future<Task?> taskById(String id) => _dao.taskById(id);
 }
 
@@ -42,7 +45,8 @@ class SubTaskRepository {
   Future<List<SubTask>> forTask(String taskId) => _dao.subTasksForTask(taskId);
   Future<void> upsert(SubTasksCompanion subTask) => _dao.upsertSubTask(subTask);
   Future<void> delete(String id) => _dao.deleteSubTask(id).then((_) => null);
-  Future<void> toggleCompletion(String id, bool isCompleted) => _dao.toggleCompletion(id, isCompleted);
+  Future<void> toggleCompletion(String id, bool isCompleted) =>
+      _dao.toggleCompletion(id, isCompleted);
 }
 
 class FocusSessionRepository {
@@ -50,9 +54,11 @@ class FocusSessionRepository {
   final FocusSessionDao _dao;
 
   Stream<List<FocusSession>> watchSessions() => _dao.watchSessions();
-  Future<void> logSession(FocusSessionsCompanion session) => _dao.logSession(session);
+  Future<void> logSession(FocusSessionsCompanion session) =>
+      _dao.logSession(session);
   Future<FocusSession?> activeSession() => _dao.activeSession();
-  Future<void> closeSession(String id, DateTime endedAt) => _dao.closeSession(id, endedAt);
+  Future<void> closeSession(String id, DateTime endedAt) =>
+      _dao.closeSession(id, endedAt);
 }
 
 class TagRepository {
@@ -68,7 +74,8 @@ class DigestRepository {
   final DigestDao _dao;
 
   Stream<List<DigestSnapshot>> watchSnapshots() => _dao.watchSnapshots();
-  Future<void> upsert(DigestSnapshotsCompanion snapshot) => _dao.upsertSnapshot(snapshot);
+  Future<void> upsert(DigestSnapshotsCompanion snapshot) =>
+      _dao.upsertSnapshot(snapshot);
 }
 
 final goalRepositoryProvider = Provider<GoalRepository>((ref) {

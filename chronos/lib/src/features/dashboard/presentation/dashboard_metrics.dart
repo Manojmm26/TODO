@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import '../../../data/local/app_database.dart';
 import '../data/dashboard_models.dart';
 
@@ -117,7 +118,8 @@ int focusMinutesToday(List<FocusSession> sessions) {
   final endOfDay = startOfDay.add(const Duration(days: 1));
   int minutes = 0;
   for (final session in sessions) {
-    if (session.startedAt.isAfter(startOfDay) && session.startedAt.isBefore(endOfDay)) {
+    if (session.startedAt.isAfter(startOfDay) &&
+        session.startedAt.isBefore(endOfDay)) {
       minutes += sessionElapsedMinutes(session).round();
     }
   }
@@ -144,7 +146,11 @@ int sessionsTodayCount(List<FocusSession> sessions) {
   final startOfDay = DateTime(now.year, now.month, now.day);
   final endOfDay = startOfDay.add(const Duration(days: 1));
   return sessions
-      .where((session) => session.startedAt.isAfter(startOfDay) && session.startedAt.isBefore(endOfDay))
+      .where(
+        (session) =>
+            session.startedAt.isAfter(startOfDay) &&
+            session.startedAt.isBefore(endOfDay),
+      )
       .length;
 }
 
@@ -162,7 +168,11 @@ double timeLeftFractionToday() {
 double timeLeftFractionWeek() {
   final now = DateTime.now();
   // Start of week (Monday)
-  final startOfWeek = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+  final startOfWeek = DateTime(
+    now.year,
+    now.month,
+    now.day,
+  ).subtract(Duration(days: now.weekday - 1));
   final endOfWeek = startOfWeek.add(const Duration(days: 7));
   final total = endOfWeek.difference(startOfWeek).inMinutes.toDouble();
   final left = endOfWeek.difference(now).inMinutes.toDouble();
@@ -173,8 +183,61 @@ double timeLeftFractionWeek() {
 double timeLeftFractionMonth() {
   final now = DateTime.now();
   final startOfMonth = DateTime(now.year, now.month, 1);
-  final startOfNextMonth = (now.month < 12) ? DateTime(now.year, now.month + 1, 1) : DateTime(now.year + 1, 1, 1);
+  final startOfNextMonth = (now.month < 12)
+      ? DateTime(now.year, now.month + 1, 1)
+      : DateTime(now.year + 1, 1, 1);
   final total = startOfNextMonth.difference(startOfMonth).inMinutes.toDouble();
   final left = startOfNextMonth.difference(now).inMinutes.toDouble();
   return (left / total).clamp(0.0, 1.0);
+}
+
+int computeCurrentStreak(List<FocusSession> sessions) {
+  final now = DateTime.now();
+  final todayStart = DateTime(now.year, now.month, now.day);
+  final datesWithFocus = _sessionsByDate(sessions).keys.toList()
+    ..sort((a, b) => b.compareTo(a));
+  int streak = 0;
+  DateTime expectedDate = todayStart;
+  for (final date in datesWithFocus) {
+    if (date.isAfter(expectedDate)) continue;
+    if (date.isAtSameMomentAs(expectedDate)) {
+      streak++;
+      expectedDate = expectedDate.subtract(const Duration(days: 1));
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+int computeBestStreak(List<FocusSession> sessions) {
+  final datesWithFocus = _sessionsByDate(sessions).keys.toList()..sort();
+  if (datesWithFocus.isEmpty) return 0;
+  int maxStreak = 1;
+  int currentStreak = 1;
+  for (int i = 1; i < datesWithFocus.length; i++) {
+    if (datesWithFocus[i].difference(datesWithFocus[i - 1]).inDays == 1) {
+      currentStreak++;
+      maxStreak = math.max(maxStreak, currentStreak);
+    } else {
+      currentStreak = 1;
+    }
+  }
+  return maxStreak;
+}
+
+int totalFocusDays(List<FocusSession> sessions) =>
+    _sessionsByDate(sessions).length;
+
+Map<DateTime, bool> _sessionsByDate(List<FocusSession> sessions) {
+  final map = <DateTime, bool>{};
+  for (final session in sessions) {
+    final date = DateTime(
+      session.startedAt.year,
+      session.startedAt.month,
+      session.startedAt.day,
+    );
+    map[date] = true;
+  }
+  return map;
 }

@@ -89,6 +89,7 @@ class _ChronosShellState extends ConsumerState<ChronosShell> {
 
 class _SidebarNavigation extends StatelessWidget {
   const _SidebarNavigation({
+    super.key,
     required this.selected,
     required this.onSelect,
     required this.isCollapsed,
@@ -212,55 +213,56 @@ class _NavTile extends StatelessWidget {
               ? ChronosTheme.focusAccent.withOpacity(.15)
               : Colors.transparent,
         ),
-                child: isCollapsed
-                    ? Center(
-                        child: Icon(
-                          section.icon,
-                          color: isSelected
-                              ? ChronosTheme.focusAccent
-                              : colorScheme.onSurfaceVariant,
-                        ),
-                      )
-                                : Row(
-                                    children: [
-                                      Icon(
-                                        section.icon,
-                                        color: isSelected
-                                            ? ChronosTheme.focusAccent
-                                            : colorScheme.onSurfaceVariant,
-                                      ),
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(left: 12),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                section.label,
-                                                style: theme.textTheme.bodyMedium?.copyWith(
-                                                  fontWeight: FontWeight.w600,
-                                                  color: isSelected
-                                                      ? ChronosTheme.focusAccent
-                                                      : colorScheme.onSurface,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                                maxLines: 1,
-                                              ),
-                                              Text(
-                                                section.description,
-                                                style: theme.textTheme.labelSmall?.copyWith(
-                                                  color: colorScheme.onSurfaceVariant,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                                maxLines: 1,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),      ),
+        child: isCollapsed
+            ? Center(
+                child: Icon(
+                  section.icon,
+                  color: isSelected
+                      ? ChronosTheme.focusAccent
+                      : colorScheme.onSurfaceVariant,
+                ),
+              )
+            : Row(
+                children: [
+                  Icon(
+                    section.icon,
+                    color: isSelected
+                        ? ChronosTheme.focusAccent
+                        : colorScheme.onSurfaceVariant,
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            section.label,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: isSelected
+                                  ? ChronosTheme.focusAccent
+                                  : colorScheme.onSurface,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                          Text(
+                            section.description,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 }
@@ -379,7 +381,7 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<RecurrencePreset>(
-                value: _recurrencePreset,
+                initialValue: _recurrencePreset,
                 decoration: const InputDecoration(labelText: 'Repeats'),
                 items: RecurrencePreset.values
                     .map(
@@ -430,8 +432,9 @@ class _QuickAddDialogState extends ConsumerState<_QuickAddDialog> {
                           firstDate: now,
                           lastDate: now.add(const Duration(days: 730)),
                         );
-                        if (picked != null)
+                        if (picked != null) {
                           setState(() => _recurrenceEndDate = picked);
+                        }
                       },
                       child: const Text('Set end'),
                     ),

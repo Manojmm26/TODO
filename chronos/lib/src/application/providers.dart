@@ -1,7 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../application/settings_controller.dart';
 import '../data/local/app_database.dart';
 import '../data/repositories/chronos_repositories.dart';
+
+final chronosDatabaseProvider = Provider<ChronosDatabase>((ref) {
+  final db = ChronosDatabase();
+  ref.onDispose(db.close);
+  return db;
+});
 
 final goalsStreamProvider = StreamProvider.autoDispose<List<Goal>>((ref) {
   final repository = ref.watch(goalRepositoryProvider);
@@ -31,17 +38,29 @@ final tasksDueTodayProvider = FutureProvider.autoDispose<List<Task>>((ref) {
   return repository.tasksDueToday(start, end);
 });
 
-final focusSessionsStreamProvider = StreamProvider.autoDispose<List<FocusSession>>((ref) {
-  final repository = ref.watch(focusRepositoryProvider);
-  return repository.watchSessions();
-});
+final focusSessionsStreamProvider =
+    StreamProvider.autoDispose<List<FocusSession>>((ref) {
+      final repository = ref.watch(focusRepositoryProvider);
+      return repository.watchSessions();
+    });
 
 final tagsStreamProvider = StreamProvider.autoDispose<List<Tag>>((ref) {
   final repository = ref.watch(tagRepositoryProvider);
   return repository.watchTags();
 });
 
-final digestSnapshotsProvider = StreamProvider.autoDispose<List<DigestSnapshot>>((ref) {
-  final repository = ref.watch(digestRepositoryProvider);
-  return repository.watchSnapshots();
-});
+final digestSnapshotsProvider =
+    StreamProvider.autoDispose<List<DigestSnapshot>>((ref) {
+      final repository = ref.watch(digestRepositoryProvider);
+      return repository.watchSnapshots();
+    });
+
+final settingsProvider = StateNotifierProvider<SettingsController, AppSettings>(
+  (ref) {
+    return SettingsController();
+  },
+);
+
+final themeModeProvider = settingsProvider.select(
+  (settings) => settings.themeMode,
+);

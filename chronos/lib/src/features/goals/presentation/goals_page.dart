@@ -1,3 +1,5 @@
+import 'package:chronos/src/features/dashboard/presentation/dashboard_metrics.dart';
+import 'package:chronos/src/shared/widgets/task_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -6,8 +8,9 @@ import '../../../application/providers.dart';
 import '../../../application/quick_add_controller.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/local/app_database.dart';
+import '../../../shared/constants.dart';
 import '../../../shared/widgets/section_card.dart';
-import '../../dashboard/presentation/dashboard_metrics.dart';
+import '../../dashboard/presentation/plan_task_dialog.dart';
 
 class GoalsPage extends ConsumerWidget {
   const GoalsPage({super.key});
@@ -131,14 +134,16 @@ class GoalsPage extends ConsumerWidget {
   }
 }
 
-class _GoalProgressTile extends StatelessWidget {
+bool isTaskCompleted(Task task) => task.status >= taskStatusCompleted;
+
+class _GoalProgressTile extends ConsumerWidget {
   const _GoalProgressTile({required this.goal, required this.linkedTasks});
 
   final Goal goal;
   final List<Task> linkedTasks;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final color = Color(goal.colorHex);
     final progress = ((goal.progressOverride ?? 0.0).clamp(
@@ -234,6 +239,49 @@ class _GoalProgressTile extends StatelessWidget {
                 _MetaPill(icon: Icons.notes_rounded, label: goal.description!),
             ],
           ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (_) => PlanTaskDialog(initialGoalId: goal.id),
+            ),
+            icon: const Icon(Icons.add_task_rounded),
+            label: Text(
+              linkedTasks.isEmpty
+                  ? 'Add first milestone task'
+                  : 'Add milestone task',
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (_) => _LinkExistingTaskDialog(goalId: goal.id),
+            ),
+            icon: const Icon(Icons.link_rounded),
+            label: Text(
+              linkedTasks.isEmpty
+                  ? 'Link first existing task'
+                  : 'Link existing task',
+            ),
+          ),
+          if (linkedTasks.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Divider(height: 24),
+            ...linkedTasks.map(
+              (task) => Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: TaskTile(
+                  task: task,
+                  showUnlink: true,
+                  onUnlink: () => ref
+                      .read(quickAddControllerProvider)
+                      .unlinkTaskFromGoal(task.id),
+                  showProgressBar: false,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -494,6 +542,88 @@ class _NewGoalDialogState extends ConsumerState<_NewGoalDialog> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+}
+
+class _LinkExistingTaskDialog extends ConsumerStatefulWidget {
+  const _LinkExistingTaskDialog({required this.goalId});
+
+  final String goalId;
+
+  @override
+  ConsumerState<_LinkExistingTaskDialog> createState() =>
+      _LinkExistingTaskDialogState();
+}
+
+class _LinkExistingTaskDialogState
+    extends ConsumerState<_LinkExistingTaskDialog> {
+  final Set<String> _selectedTaskIds = {};
+
+  @override
+  Widget build(BuildContext context) {
+    final tasksAsync = ref.watch(tasksStreamProvider);
+    return AlertDialog(
+      title: const Text('Link existing tasks'),
+      content: SizedBox(
+        width: 500,
+        height: 400,
+        child: tasksAsync.when(
+          data: (tasks) {
+            final unlinked = tasks
+                .where((t) => t.goalId == null && !isTaskCompleted(t))
+                .toList();
+            if (unlinked.isEmpty) {
+              return const Center(child: Text('No unlinked tasks available'));
+            }
+            return ListView.builder(
+              itemCount: unlinked.length,
+              itemBuilder: (context, index) {
+                final task = unlinked[index];
+                final isSelected = _selectedTaskIds.contains(task.id);
+                return CheckboxListTile(
+                  title: Text(task.title),
+                  subtitle: Text(task.description ?? ''),
+                  value: isSelected,
+                  onChanged: (_) {
+                    setState(() {
+                      if (isSelected) {
+                        _selectedTaskIds.remove(task.id);
+                      } else {
+                        _selectedTaskIds.add(task.id);
+                      }
+                    });
+                  },
+                );
+              },
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (_, __) => const Center(child: Text('Error loading tasks')),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton.icon(
+          onPressed: _selectedTaskIds.isEmpty
+              ? null
+              : () async {
+                  for (final taskId in _selectedTaskIds) {
+                    await ref
+                        .read(quickAddControllerProvider)
+                        .linkTaskToGoal(taskId, widget.goalId);
+                  }
+                  if (mounted) Navigator.of(context).pop();
+                },
+          icon: const Icon(Icons.link),
+          label: Text(
+            'Link ${_selectedTaskIds.length} task${_selectedTaskIds.length != 1 ? 's' : ''}',
+          ),
+        ),
+      ],
+    );
   }
 }
 

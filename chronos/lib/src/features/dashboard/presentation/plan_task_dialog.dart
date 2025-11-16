@@ -7,7 +7,9 @@ import '../../../shared/recurrence/recurrence_utils.dart';
 import '../data/dashboard_models.dart';
 
 class PlanTaskDialog extends ConsumerStatefulWidget {
-  const PlanTaskDialog({super.key});
+  const PlanTaskDialog({super.key, this.initialGoalId});
+
+  final String? initialGoalId;
 
   @override
   ConsumerState<PlanTaskDialog> createState() => _PlanTaskDialogState();
@@ -32,6 +34,14 @@ class _PlanTaskDialogState extends ConsumerState<PlanTaskDialog> {
     _goalIdController.dispose();
     _customRecurrenceController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialGoalId != null) {
+      _goalIdController.text = widget.initialGoalId!;
+    }
   }
 
   @override
@@ -254,12 +264,13 @@ class _PlanTaskDialogState extends ConsumerState<PlanTaskDialog> {
     final quickAdd = ref.read(quickAddControllerProvider);
     final dueDate = _explicitDueDate ?? _suggestedDueDate(_bucket);
     final flags = _bucketFlags(_bucket);
+    final description = _descriptionController.text.trim().isEmpty
+        ? null
+        : _descriptionController.text.trim();
     try {
       await quickAdd.addTask(
         title: title,
-        description: _descriptionController.text.trim().isEmpty
-            ? null
-            : _descriptionController.text.trim(),
+        description: description,
         goalId: _goalIdController.text.trim().isEmpty
             ? null
             : _goalIdController.text.trim(),

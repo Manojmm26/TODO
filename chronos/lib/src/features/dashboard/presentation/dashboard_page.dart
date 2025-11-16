@@ -1,6 +1,6 @@
 import 'dart:math' as math;
-
-import 'package:chronos/src/shared/constants.dart';
+import 'package:chronos/src/features/dashboard/data/dashboard_models.dart';
+import 'package:chronos/src/shared/widgets/task_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -9,12 +9,9 @@ import 'plan_task_dialog.dart';
 
 import '../../../application/focus_session_controller.dart';
 import '../../../application/providers.dart';
-import '../../../application/sub_task_controller.dart';
-import '../../../application/task_controller.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/local/app_database.dart';
 import '../../../shared/widgets/section_card.dart';
-import '../data/dashboard_models.dart';
 import 'dashboard_metrics.dart';
 
 class DashboardPage extends ConsumerWidget {
@@ -78,268 +75,6 @@ class DashboardPage extends ConsumerWidget {
         ],
       ),
     );
-  }
-}
-
-class _AddSubTaskField extends ConsumerStatefulWidget {
-  const _AddSubTaskField({required this.taskId, required this.nextOrder});
-
-  final String taskId;
-  final int nextOrder;
-
-  @override
-  ConsumerState<_AddSubTaskField> createState() => _AddSubTaskFieldState();
-}
-
-class _AddSubTaskFieldState extends ConsumerState<_AddSubTaskField> {
-  final _controller = TextEditingController();
-  bool _isAdding = false;
-  bool _isSaving = false;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (!_isAdding) {
-      return TextButton.icon(
-        onPressed: () => setState(() => _isAdding = true),
-        icon: const Icon(Icons.add_outlined, size: 18),
-        label: const Text('Add sub-task'),
-      );
-    }
-
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: _controller,
-            enabled: !_isSaving,
-            autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'Sub-task title',
-              isDense: true,
-            ),
-            onSubmitted: (_) => _submit(context),
-          ),
-        ),
-        IconButton(
-          tooltip: 'Save sub-task',
-          onPressed: _isSaving ? null : () => _submit(context),
-          icon: _isSaving
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.check_rounded),
-        ),
-        IconButton(
-          tooltip: 'Cancel',
-          onPressed: _isSaving
-              ? null
-              : () {
-                  _controller.clear();
-                  setState(() => _isAdding = false);
-                },
-          icon: const Icon(Icons.close_rounded),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _submit(BuildContext context) async {
-    final title = _controller.text.trim();
-    if (title.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Sub-task title required')));
-      return;
-    }
-
-    setState(() => _isSaving = true);
-    final subTasks = ref.read(subTaskControllerProvider);
-    try {
-      await subTasks.create(
-        taskId: widget.taskId,
-        title: title,
-        sortOrder: widget.nextOrder,
-      );
-      _controller.clear();
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-          _isAdding = false;
-        });
-      }
-    } catch (error) {
-      if (mounted) {
-        setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add sub-task: $error')),
-        );
-      }
-    }
-  }
-}
-
-class _SubTaskList extends StatelessWidget {
-  const _SubTaskList({required this.subTasks});
-
-  final List<SubTask> subTasks;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: subTasks
-          .map(
-            (subTask) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: _SubTaskTile(subTask: subTask),
-            ),
-          )
-          .toList(),
-    );
-  }
-}
-
-class _SubTaskTile extends ConsumerStatefulWidget {
-  const _SubTaskTile({required this.subTask});
-
-  final SubTask subTask;
-
-  @override
-  ConsumerState<_SubTaskTile> createState() => _SubTaskTileState();
-}
-
-class _SubTaskTileState extends ConsumerState<_SubTaskTile> {
-  bool _isEditing = false;
-  bool _isSaving = false;
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.subTask.title,
-  );
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final subTask = widget.subTask;
-    final controller = ref.read(subTaskControllerProvider);
-
-    return Row(
-      children: [
-        Checkbox(
-          value: subTask.isCompleted,
-          onChanged: (value) =>
-              controller.toggleCompletion(subTask.id, value ?? false),
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          visualDensity: VisualDensity.compact,
-        ),
-        const SizedBox(width: 4),
-        if (_isEditing)
-          Expanded(
-            child: TextField(
-              controller: _controller,
-              autofocus: true,
-              enabled: !_isSaving,
-              decoration: const InputDecoration(isDense: true),
-              onSubmitted: (_) => _save(context),
-            ),
-          )
-        else
-          Expanded(
-            child: Text(
-              subTask.title,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                decoration: subTask.isCompleted
-                    ? TextDecoration.lineThrough
-                    : null,
-                color: subTask.isCompleted
-                    ? theme.colorScheme.onSurfaceVariant
-                    : null,
-              ),
-            ),
-          ),
-        if (_isEditing)
-          IconButton(
-            tooltip: 'Save',
-            onPressed: _isSaving ? null : () => _save(context),
-            icon: _isSaving
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.check_rounded, size: 18),
-          )
-        else
-          IconButton(
-            tooltip: 'Edit',
-            onPressed: () {
-              setState(() {
-                _controller.text = subTask.title;
-                _isEditing = true;
-              });
-            },
-            icon: const Icon(Icons.edit_outlined, size: 18),
-          ),
-        IconButton(
-          tooltip: _isEditing ? 'Cancel' : 'Delete',
-          onPressed: _isSaving
-              ? null
-              : () async {
-                  if (_isEditing) {
-                    setState(() => _isEditing = false);
-                    _controller.text = subTask.title;
-                    return;
-                  }
-                  await controller.delete(subTask.id);
-                },
-          icon: Icon(
-            _isEditing ? Icons.close_rounded : Icons.delete_outline_rounded,
-            size: 18,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _save(BuildContext context) async {
-    final title = _controller.text.trim();
-    if (title.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Title required')));
-      return;
-    }
-    setState(() => _isSaving = true);
-    try {
-      await ref
-          .read(subTaskControllerProvider)
-          .rename(widget.subTask.id, title);
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-          _isEditing = false;
-        });
-      }
-    } catch (error) {
-      if (mounted) {
-        setState(() => _isSaving = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to rename: $error')));
-      }
-    }
   }
 }
 
@@ -418,7 +153,7 @@ class _TimelineOverview extends StatelessWidget {
   }
 }
 
-class _BucketGroup extends StatelessWidget {
+class _BucketGroup extends StatefulWidget {
   const _BucketGroup({
     required this.bucket,
     required this.tasks,
@@ -430,8 +165,19 @@ class _BucketGroup extends StatelessWidget {
   final Map<String, List<SubTask>> subTasksByTask;
 
   @override
+  State<_BucketGroup> createState() => _BucketGroupState();
+}
+
+class _BucketGroupState extends State<_BucketGroup> {
+  bool _showCompleted = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final incompleteTasks = widget.tasks
+        .where((t) => !isTaskCompleted(t))
+        .toList();
+    final displayTasks = _showCompleted ? widget.tasks : incompleteTasks;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
@@ -443,344 +189,90 @@ class _BucketGroup extends StatelessWidget {
                 width: 10,
                 height: 10,
                 decoration: BoxDecoration(
-                  color: bucket.color,
+                  color: widget.bucket.color,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
               const SizedBox(width: 8),
               Text(
-                bucket.label,
+                widget.bucket.label,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const Spacer(),
-              Text('${tasks.length} items', style: theme.textTheme.labelSmall),
+              Text(
+                '${incompleteTasks.length} / ${widget.tasks.length} items',
+                style: theme.textTheme.labelSmall,
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(1, 1),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                onPressed: () =>
+                    setState(() => _showCompleted = !_showCompleted),
+                child: Text(
+                  _showCompleted
+                      ? 'Hide completed'
+                      : 'Show completed (${widget.tasks.length - incompleteTasks.length})',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
-          if (tasks.isEmpty)
+          if (displayTasks.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Column(
                 children: [
-                  Icon(
-                    Icons.inbox_outlined,
-                    size: 48,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                  if (widget.tasks.isEmpty)
+                    Icon(
+                      Icons.inbox_outlined,
+                      size: 48,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    )
+                  else
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 48,
+                      color: ChronosTheme.focusAccent,
+                    ),
                   const SizedBox(height: 8),
                   Text(
-                    'No tasks in ${bucket.label.toLowerCase()} yet',
+                    widget.tasks.isEmpty
+                        ? 'No tasks in ${widget.bucket.label.toLowerCase()} yet'
+                        : 'All tasks completed!',
                     style: theme.textTheme.labelMedium,
                   ),
                   const SizedBox(height: 8),
-                  FilledButton.icon(
-                    onPressed: () => showDialog(
-                      context: context,
-                      builder: (_) => const PlanTaskDialog(),
+                  if (widget.tasks.isEmpty)
+                    FilledButton.icon(
+                      onPressed: () => showDialog(
+                        context: context,
+                        builder: (_) => const PlanTaskDialog(),
+                      ),
+                      icon: const Icon(Icons.add_task_rounded, size: 16),
+                      label: const Text('Plan a task'),
+                    )
+                  else
+                    TextButton.icon(
+                      onPressed: () => setState(() => _showCompleted = true),
+                      icon: const Icon(Icons.visibility_outlined, size: 16),
+                      label: const Text('Show completed'),
                     ),
-                    icon: const Icon(Icons.add_task_rounded, size: 16),
-                    label: const Text('Plan a task'),
-                  ),
                 ],
               ),
             )
           else
-            ...tasks.map(
-              (task) => _TimelineTile(
-                task: task,
-                bucket: bucket,
-                subTasks: subTasksByTask[task.id] ?? const <SubTask>[],
-              ),
+            ...displayTasks.map(
+              (task) => TaskTile(task: task, bucket: widget.bucket),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TimelineTile extends StatelessWidget {
-  const _TimelineTile({
-    required this.task,
-    required this.bucket,
-    required this.subTasks,
-  });
-
-  final Task task;
-  final TimelineBucket bucket;
-  final List<SubTask> subTasks;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final dueText = task.dueDate != null
-        ? DateFormat('MMM d · h:mm a').format(task.dueDate!)
-        : 'No due date';
-    final bucketColor = bucket.color;
-    final progress = subTasks.isNotEmpty
-        ? subTaskCompletionProgress(subTasks)
-        : taskProgress(task);
-    final priority = priorityFromInt(task.priority);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(.4),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  task.title,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              if (task.isRecurring)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Tooltip(
-                    message: 'Recurring task',
-                    child: Icon(
-                      Icons.autorenew_rounded,
-                      size: 18,
-                      color: bucketColor,
-                    ),
-                  ),
-                ),
-              _PriorityChip(priority: priority),
-              const SizedBox(width: 8),
-              Consumer(
-                builder: (context, ref, _) {
-                  final taskController = ref.read(taskControllerProvider);
-                  final isCompleted = task.status >= taskStatusCompleted;
-                  return IconButton(
-                    tooltip: isCompleted ? 'Completed' : 'Mark complete',
-                    onPressed: isCompleted
-                        ? null
-                        : () => taskController.completeTask(task),
-                    icon: Icon(
-                      isCompleted
-                          ? Icons.check_circle
-                          : Icons.radio_button_unchecked,
-                      color: isCompleted ? bucketColor : null,
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-          if (task.projectId != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'Project: ${task.projectId}',
-                style: theme.textTheme.labelMedium,
-              ),
-            )
-          else if (task.goalId != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'Goal: ${task.goalId}',
-                style: theme.textTheme.labelMedium,
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 6,
-              backgroundColor: theme.colorScheme.surface,
-              valueColor: AlwaysStoppedAnimation(bucketColor),
-            ),
-          ),
-          if (subTasks.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _SubTaskList(subTasks: subTasks),
-            ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: _AddSubTaskField(
-              taskId: task.id,
-              nextOrder: subTasks.length,
-            ),
-          ),
-          Text(
-            dueText,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PriorityChip extends StatelessWidget {
-  const _PriorityChip({required this.priority});
-
-  final TaskPriority priority;
-
-  Color _chipColor(TaskPriority priority) {
-    return switch (priority) {
-      TaskPriority.high => const Color(0xFFE53935),
-      TaskPriority.medium => const Color(0xFFFFA000),
-      TaskPriority.low => const Color(0xFF43A047),
-    };
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = _chipColor(priority);
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: color.withOpacity(.15),
-      ),
-      child: Text(
-        priority.label,
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
-
-class _GoalsProgress extends StatelessWidget {
-  const _GoalsProgress({required this.goalsAsync});
-
-  final AsyncValue<List<Goal>> goalsAsync;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return goalsAsync.when(
-      data: (goals) {
-        return SectionCard(
-          title: 'Goal Progress',
-          subtitle: 'Visual tracker for major goals',
-          trailing: IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.analytics_rounded),
-          ),
-          child: goals.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 8,
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.flag_outlined,
-                        size: 48,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'No goals yet. Create one to start tracking progress.',
-                      ),
-                      const SizedBox(height: 16),
-                      OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.flag_rounded),
-                        label: const Text('Create goal'),
-                      ),
-                    ],
-                  ),
-                )
-              : Column(
-                  children: goals.map((goal) => _GoalTile(goal: goal)).toList(),
-                ),
-        );
-      },
-      loading: () => const Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Center(child: CircularProgressIndicator()),
-        ),
-      ),
-      error: (error, stackTrace) => Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text('Unable to load goals: $error'),
-        ),
-      ),
-    );
-  }
-}
-
-class _GoalTile extends StatelessWidget {
-  const _GoalTile({required this.goal});
-
-  final Goal goal;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = Color(goal.colorHex);
-    final progress = ((goal.progressOverride ?? 0.0).clamp(
-      0.0,
-      1.0,
-    )).toDouble();
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: color.withOpacity(.12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  goal.title,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              Text(
-                '${(progress * 100).round()}%',
-                style: theme.textTheme.titleMedium,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              backgroundColor: Colors.white.withOpacity(.4),
-              valueColor: AlwaysStoppedAnimation(color),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            goal.targetDate != null
-                ? 'Due ${DateFormat.MMMd().format(goal.targetDate!)}'
-                : 'No deadline',
-            style: theme.textTheme.labelSmall,
-          ),
         ],
       ),
     );
@@ -1281,6 +773,134 @@ class _DigestMetric extends StatelessWidget {
           Text(label, style: theme.textTheme.labelLarge),
           const SizedBox(height: 8),
           Text(trend, style: theme.textTheme.labelSmall),
+        ],
+      ),
+    );
+  }
+}
+
+class _GoalsProgress extends StatelessWidget {
+  const _GoalsProgress({required this.goalsAsync});
+
+  final AsyncValue<List<Goal>> goalsAsync;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return goalsAsync.when(
+      data: (goals) {
+        return SectionCard(
+          title: 'Goal Progress',
+          subtitle: 'Visual tracker for major goals',
+          trailing: IconButton(
+            onPressed: () {},
+            icon: const Icon(Icons.analytics_rounded),
+          ),
+          child: goals.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 8,
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.flag_outlined,
+                        size: 48,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'No goals yet. Create one to start tracking progress.',
+                      ),
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.flag_rounded),
+                        label: const Text('Create goal'),
+                      ),
+                    ],
+                  ),
+                )
+              : Column(
+                  children: goals.map((goal) => _GoalTile(goal: goal)).toList(),
+                ),
+        );
+      },
+      loading: () => const Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      error: (error, stackTrace) => Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('Unable to load goals: $error'),
+        ),
+      ),
+    );
+  }
+}
+
+class _GoalTile extends StatelessWidget {
+  const _GoalTile({required this.goal});
+
+  final Goal goal;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = Color(goal.colorHex);
+    final progress = ((goal.progressOverride ?? 0.0).clamp(
+      0.0,
+      1.0,
+    )).toDouble();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: color.withOpacity(.12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  goal.title,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                '${(progress * 100).round()}%',
+                style: theme.textTheme.titleMedium,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              backgroundColor: Colors.white.withOpacity(.4),
+              valueColor: AlwaysStoppedAnimation(color),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            goal.targetDate != null
+                ? 'Due ${DateFormat.MMMd().format(goal.targetDate!)}'
+                : 'No deadline',
+            style: theme.textTheme.labelSmall,
+          ),
         ],
       ),
     );

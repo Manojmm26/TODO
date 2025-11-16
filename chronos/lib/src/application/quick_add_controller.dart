@@ -91,4 +91,20 @@ class QuickAddController {
     );
     return _subTasks.upsert(companion);
   }
+
+  Future<void> linkTaskToGoal(String taskId, String goalId) {
+    final companion = TasksCompanion(
+      goalId: Value(goalId),
+      updatedAt: Value(DateTime.now()),
+    );
+    return _tasks.update(taskId, companion);
+  }
+
+  Future<void> unlinkTaskFromGoal(String taskId) {
+    final companion = TasksCompanion(
+      goalId: const Value.absent(),
+      updatedAt: Value(DateTime.now()),
+    );
+    return _tasks.update(taskId, companion);
+  }
 }

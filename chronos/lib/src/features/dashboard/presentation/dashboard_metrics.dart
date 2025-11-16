@@ -1,4 +1,6 @@
 import 'dart:math' as math;
+import 'package:chronos/src/shared/constants.dart';
+
 import '../../../data/local/app_database.dart';
 import '../data/dashboard_models.dart';
 
@@ -110,7 +112,7 @@ int sessionDisplayMinutes(FocusSession session) {
   return sessionElapsedMinutes(session).round();
 }
 
-bool isTaskCompleted(Task task) => task.status >= 2;
+bool isTaskCompleted(Task task) => task.status >= taskStatusCompleted;
 
 int focusMinutesToday(List<FocusSession> sessions) {
   final now = DateTime.now();

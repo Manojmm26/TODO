@@ -1,15 +1,137 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
+import 'package:window_manager/window_manager.dart';
 
 import '../core/theme/app_theme.dart';
 import '../routing/app_router.dart';
 import '../application/recurrence_coordinator.dart';
 
-class ChronosApp extends ConsumerWidget {
+class ChronosApp extends ConsumerStatefulWidget {
   const ChronosApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ChronosApp> createState() => _ChronosAppState();
+}
+
+class _ChronosAppState extends ConsumerState<ChronosApp>
+    with WindowListener, WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    if (!kIsWeb) {
+      windowManager.addListener(this);
+      WidgetsBinding.instance.addObserver(this);
+      debugPrint('🪟 WindowListener + WidgetsBindingObserver registered');
+    }
+  }
+
+  @override
+  void dispose() {
+    if (!kIsWeb) {
+      windowManager.removeListener(this);
+      WidgetsBinding.instance.removeObserver(this);
+    }
+    super.dispose();
+  }
+
+  // Log ALL window events
+  @override
+  void onWindowMoved() {
+    debugPrint('🪟 onWindowMoved');
+    _scheduleSaveWindowState();
+  }
+
+  @override
+  void onWindowResized() {
+    debugPrint('🪟 onWindowResized');
+    _scheduleSaveWindowState();
+  }
+
+  @override
+  void onWindowMaximized() {
+    debugPrint('🪟 onWindowMaximized');
+    _scheduleSaveWindowState();
+  }
+
+  @override
+  void onWindowUnmaximized() {
+    debugPrint('🪟 onWindowUnmaximized');
+    _scheduleSaveWindowState();
+  }
+
+  @override
+  void onWindowMinimized() {
+    debugPrint('🪟 onWindowMinimized');
+  }
+
+  @override
+  void onWindowRestored() {
+    debugPrint('🪟 onWindowRestored');
+  }
+
+  @override
+  void onWindowEnteredFullScreen() {
+    debugPrint('🪟 onWindowEnteredFullScreen');
+  }
+
+  @override
+  void onWindowExitedFullScreen() {
+    debugPrint('🪟 onWindowExitedFullScreen');
+  }
+
+  void onWindowClose() {
+    debugPrint('🪟 onWindowClose() called');
+    _saveWindowState();
+    super.onWindowClose();
+  }
+
+  /// Debounce frequent window events so we don't hammer preferences.
+  Timer? _saveStateTimer;
+
+  void _scheduleSaveWindowState([int milliseconds = 300]) {
+    _saveStateTimer?.cancel();
+    _saveStateTimer = Timer(Duration(milliseconds: milliseconds), () {
+      _saveWindowState();
+    });
+  }
+
+  Future<void> _saveWindowState() async {
+    if (!kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      final size = await windowManager.getSize();
+      final pos = await windowManager.getPosition();
+
+      print(
+        '🚪 SAVING window: ${size.width}x${size.height} @ ${pos.dx},${pos.dy}',
+      );
+
+      await prefs.setDouble('window_width', size.width);
+      await prefs.setDouble('window_height', size.height);
+      await prefs.setDouble('window_x', pos.dx);
+      final isMax = await windowManager.isMaximized();
+      await prefs.setBool('window_is_maximized', isMax);
+      await prefs.setDouble('window_y', pos.dy);
+
+      final savedW = prefs.getDouble('window_width');
+      final savedH = prefs.getDouble('window_height');
+      print('💾 SAVED: ${savedW}x${savedH}');
+      final savedMax = prefs.getBool('window_is_maximized');
+      print('💾 Window maximized: ${savedMax ?? false}');
+      print('✅ Window state saved!');
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    debugPrint('📱 AppLifecycleState: $state');
+    super.didChangeAppLifecycleState(state);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final router = ref.watch(appRouterProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
+import 'package:launch_at_startup/launch_at_startup.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppSettings {
@@ -127,6 +129,18 @@ class SettingsController extends StateNotifier<AppSettings> {
       selectedSound: prefs.getString(_selectedSoundKey) ?? 'Rain',
       notificationChimes: prefs.getBool(_notificationChimesKey) ?? true,
     );
+
+    if (!kIsWeb) {
+      try {
+        final actualEnabled = await launchAtStartup.isEnabled();
+        if (state.launchAtStartup != actualEnabled) {
+          state = state.copyWith(launchAtStartup: actualEnabled);
+          await prefs.setBool(_launchAtStartupKey, actualEnabled);
+        }
+      } catch (e) {
+        debugPrint('Failed to check launch at startup: $e');
+      }
+    }
   }
 
   Future<void> _saveSettings() async {
@@ -165,9 +179,23 @@ class SettingsController extends StateNotifier<AppSettings> {
     _saveSettings();
   }
 
-  void updateLaunchAtStartup(bool value) {
+  Future<void> updateLaunchAtStartup(bool value) async {
     state = state.copyWith(launchAtStartup: value);
-    _saveSettings();
+    await _saveSettings();
+
+    if (!kIsWeb) {
+      try {
+        if (value) {
+          await launchAtStartup.enable();
+        } else {
+          await launchAtStartup.disable();
+        }
+      } catch (e) {
+        debugPrint('Failed to update launch at startup: $e');
+        // Optionally revert state
+        // state = state.copyWith(launchAtStartup: !value);
+      }
+    }
   }
 
   void updateLaunchMinimized(bool value) {

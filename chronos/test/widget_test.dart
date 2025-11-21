@@ -7,6 +7,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 import 'dart:ui';
 
 import 'package:chronos/src/app/chronos_app.dart';
@@ -18,6 +19,11 @@ void main() {
     tester.binding.window.physicalSizeTestValue = const Size(3200, 2200);
     addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
     await tester.pumpWidget(const ProviderScope(child: ChronosApp()));
+    await tester.pumpAndSettle();
+
+    // Expand the sidebar
+    await tester.tap(find.byIcon(Icons.arrow_forward_ios_rounded));
+    await tester.pumpAndSettle();
 
     expect(find.textContaining('Chronos'), findsWidgets);
     expect(find.textContaining('Timeline'), findsWidgets);

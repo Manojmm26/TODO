@@ -1,4 +1,11 @@
 import 'package:chronos/src/data/local/app_database.dart';
+import 'package:chronos/src/data/local/daos/digest_dao.dart';
+import 'package:chronos/src/data/local/daos/focus_session_dao.dart';
+import 'package:chronos/src/data/local/daos/goal_dao.dart';
+import 'package:chronos/src/data/local/daos/project_dao.dart';
+import 'package:chronos/src/data/local/daos/sub_task_dao.dart';
+import 'package:chronos/src/data/local/daos/tag_dao.dart';
+import 'package:chronos/src/data/local/daos/task_dao.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class GoalRepository {

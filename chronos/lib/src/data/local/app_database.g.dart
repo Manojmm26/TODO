@@ -7858,34 +7858,3 @@ class $ChronosDatabaseManager {
   $$DigestSnapshotsTableTableManager get digestSnapshots =>
       $$DigestSnapshotsTableTableManager(_db, _db.digestSnapshots);
 }
-
-mixin _$GoalDaoMixin on DatabaseAccessor<ChronosDatabase> {
-  $GoalsTable get goals => attachedDatabase.goals;
-}
-mixin _$ProjectDaoMixin on DatabaseAccessor<ChronosDatabase> {
-  $GoalsTable get goals => attachedDatabase.goals;
-  $ProjectsTable get projects => attachedDatabase.projects;
-}
-mixin _$TaskDaoMixin on DatabaseAccessor<ChronosDatabase> {
-  $GoalsTable get goals => attachedDatabase.goals;
-  $ProjectsTable get projects => attachedDatabase.projects;
-  $TasksTable get tasks => attachedDatabase.tasks;
-}
-mixin _$SubTaskDaoMixin on DatabaseAccessor<ChronosDatabase> {
-  $GoalsTable get goals => attachedDatabase.goals;
-  $ProjectsTable get projects => attachedDatabase.projects;
-  $TasksTable get tasks => attachedDatabase.tasks;
-  $SubTasksTable get subTasks => attachedDatabase.subTasks;
-}
-mixin _$FocusSessionDaoMixin on DatabaseAccessor<ChronosDatabase> {
-  $GoalsTable get goals => attachedDatabase.goals;
-  $ProjectsTable get projects => attachedDatabase.projects;
-  $TasksTable get tasks => attachedDatabase.tasks;
-  $FocusSessionsTable get focusSessions => attachedDatabase.focusSessions;
-}
-mixin _$TagDaoMixin on DatabaseAccessor<ChronosDatabase> {
-  $TagsTable get tags => attachedDatabase.tags;
-}
-mixin _$DigestDaoMixin on DatabaseAccessor<ChronosDatabase> {
-  $DigestSnapshotsTable get digestSnapshots => attachedDatabase.digestSnapshots;
-}

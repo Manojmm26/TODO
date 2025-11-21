@@ -7,6 +7,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'daos/digest_dao.dart';
+import 'daos/focus_session_dao.dart';
+import 'daos/goal_dao.dart';
+import 'daos/project_dao.dart';
+import 'daos/sub_task_dao.dart';
+import 'daos/tag_dao.dart';
+import 'daos/task_dao.dart';
+
 part 'app_database.g.dart';
 
 class Goals extends Table {
@@ -155,159 +163,9 @@ LazyDatabase _openConnection() {
   });
 }
 
-@DriftAccessor(tables: [Goals])
-class GoalDao extends DatabaseAccessor<ChronosDatabase> {
-  GoalDao(super.db);
-
-  $GoalsTable get goals => attachedDatabase.goals;
-
-  Stream<List<Goal>> watchGoals() => select(goals).watch();
-  Future<List<Goal>> getGoals() => select(goals).get();
-  Future<void> upsertGoal(GoalsCompanion goal) =>
-      into(goals).insertOnConflictUpdate(goal);
-  Future<int> deleteGoal(String id) =>
-      (delete(goals)..where((tbl) => tbl.id.equals(id))).go();
-}
-
-@DriftAccessor(tables: [Projects])
-class ProjectDao extends DatabaseAccessor<ChronosDatabase> {
-  ProjectDao(super.db);
-
-  $ProjectsTable get projects => attachedDatabase.projects;
-
-  Stream<List<Project>> watchProjects() => select(projects).watch();
-  Future<void> upsertProject(ProjectsCompanion project) =>
-      into(projects).insertOnConflictUpdate(project);
-  Future<int> deleteProject(String id) =>
-      (delete(projects)..where((tbl) => tbl.id.equals(id))).go();
-}
-
-@DriftAccessor(tables: [Tasks])
-class TaskDao extends DatabaseAccessor<ChronosDatabase> {
-  TaskDao(super.db);
-
-  $TasksTable get tasks => attachedDatabase.tasks;
-
-  Stream<List<Task>> watchTasks() => select(tasks).watch();
-  Future<List<Task>> tasksDueToday(DateTime start, DateTime end) {
-    final query = select(tasks)
-      ..where((tbl) => tbl.dueDate.isBetweenValues(start, end));
-    return query.get();
-  }
-
-  Future<void> upsertTask(TasksCompanion task) =>
-      into(tasks).insertOnConflictUpdate(task);
-  Future<void> updateTask(String id, TasksCompanion task) {
-    assert(!task.id.present, 'Do not include an id when updating a task');
-    return (update(
-      tasks,
-    )..where((tbl) => tbl.id.equals(id))).write(task).then((_) => null);
-  }
-
-  Future<int> deleteTask(String id) =>
-      (delete(tasks)..where((tbl) => tbl.id.equals(id))).go();
-
-  Future<Task?> taskById(String id) =>
-      (select(tasks)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
-
-  Future<List<Task>> recurringSourceTasks() {
-    return (select(tasks)..where(
-          (tbl) =>
-              tbl.isRecurring.equals(true) & tbl.parentRecurringId.isNull(),
-        ))
-        .get();
-  }
-
-  Future<List<Task>> seriesForTemplate(String templateId) =>
-      (select(tasks)
-            ..where(
-              (tbl) =>
-                  tbl.id.equals(templateId) |
-                  tbl.parentRecurringId.equals(templateId),
-            )
-            ..orderBy([
-              (tbl) => OrderingTerm(
-                expression: tbl.dueDate,
-                mode: OrderingMode.desc,
-              ),
-            ]))
-          .get();
-}
-
-@DriftAccessor(tables: [SubTasks])
-class SubTaskDao extends DatabaseAccessor<ChronosDatabase> {
-  SubTaskDao(super.db);
-
-  $SubTasksTable get subTasks => attachedDatabase.subTasks;
-
-  Stream<List<SubTask>> watchSubTasks() => select(subTasks).watch();
-
-  Future<List<SubTask>> subTasksForTask(String taskId) {
-    return (select(subTasks)..where((tbl) => tbl.taskId.equals(taskId))).get();
-  }
-
-  Future<void> upsertSubTask(SubTasksCompanion subTask) =>
-      into(subTasks).insertOnConflictUpdate(subTask);
-
-  Future<int> deleteSubTask(String id) =>
-      (delete(subTasks)..where((tbl) => tbl.id.equals(id))).go();
-
-  Future<void> toggleCompletion(String id, bool isCompleted) {
-    return (update(subTasks)..where((tbl) => tbl.id.equals(id))).write(
-      SubTasksCompanion(isCompleted: Value(isCompleted)),
-    );
-  }
-}
-
-@DriftAccessor(tables: [FocusSessions])
-class FocusSessionDao extends DatabaseAccessor<ChronosDatabase> {
-  FocusSessionDao(super.db);
-
-  $FocusSessionsTable get focusSessions => attachedDatabase.focusSessions;
-
-  Stream<List<FocusSession>> watchSessions() => select(focusSessions).watch();
-  Future<void> logSession(FocusSessionsCompanion session) =>
-      into(focusSessions).insert(session);
-  Future<FocusSession?> activeSession() {
-    final query = select(focusSessions)
-      ..where((tbl) => tbl.endedAt.isNull())
-      ..orderBy([(tbl) => OrderingTerm.desc(tbl.startedAt)])
-      ..limit(1);
-    return query.getSingleOrNull();
-  }
-
-  Future<void> closeSession(String id, DateTime endedAt) {
-    return (update(focusSessions)..where((tbl) => tbl.id.equals(id))).write(
-      FocusSessionsCompanion(endedAt: Value(endedAt)),
-    );
-  }
-}
-
-@DriftAccessor(tables: [Tags])
-class TagDao extends DatabaseAccessor<ChronosDatabase> {
-  TagDao(super.db);
-
-  $TagsTable get tags => attachedDatabase.tags;
-
-  Stream<List<Tag>> watchTags() => select(tags).watch();
-  Future<void> upsertTag(TagsCompanion tag) =>
-      into(tags).insertOnConflictUpdate(tag);
-}
-
-@DriftAccessor(tables: [DigestSnapshots])
-class DigestDao extends DatabaseAccessor<ChronosDatabase> {
-  DigestDao(super.db);
-
-  $DigestSnapshotsTable get digestSnapshots => attachedDatabase.digestSnapshots;
-
-  Stream<List<DigestSnapshot>> watchSnapshots() =>
-      select(digestSnapshots).watch();
-  Future<void> upsertSnapshot(DigestSnapshotsCompanion snapshot) =>
-      into(digestSnapshots).insertOnConflictUpdate(snapshot);
-}
-
 final chronosDatabaseProvider = Provider<ChronosDatabase>((ref) {
   final db = ChronosDatabase();
   ref.onDispose(db.close);
   return db;
 });
+

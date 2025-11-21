@@ -41,6 +41,10 @@ lib/
     ├── application/   # Controllers (task, focus, recurrence)
     ├── core/          # Themes, constants
     ├── data/          # Repositories, local DB (Drift/SQLite)
+    │   ├── local/
+    │   │   ├── daos/  # Separate DAO files
+    │   │   └── app_database.dart
+    │   └── repositories/
     ├── features/      # Dashboard, Timeline, Goals, Focus, Settings
     ├── routing/       # GoRouter configuration
     └── shared/        # Widgets, utils (recurrence)
@@ -62,7 +66,8 @@ lib/
 
 ## Current Status
 - Functional MVP with core CRUD, streams for reactivity.
-- Dashboard partially implemented (metrics, cards).
+- Dashboard fully implemented with modular widgets.
+- Database layer refactored for scalability.
 - Recurrence bootstrapped.
 - Tests: Unit tests present (dashboard_metrics_test.dart, etc.).
 

@@ -62,7 +62,7 @@ class _ChronosShellState extends ConsumerState<ChronosShell> {
                   });
                 },
                 child: Container(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   margin: const EdgeInsets.only(left: 230), // expanded width
                 ),
               ),
@@ -152,7 +152,7 @@ class _SidebarNavigation extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: 0.4,
                     minHeight: 6,
-                    backgroundColor: theme.dividerColor.withOpacity(0.3),
+                    backgroundColor: theme.dividerColor.withValues(alpha: 0.3),
                     valueColor: AlwaysStoppedAnimation(
                       ChronosTheme.focusAccent,
                     ),
@@ -210,7 +210,7 @@ class _NavTile extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           color: isSelected
-              ? ChronosTheme.focusAccent.withOpacity(.15)
+              ? ChronosTheme.focusAccent.withValues(alpha: .15)
               : Colors.transparent,
         ),
         child: isCollapsed

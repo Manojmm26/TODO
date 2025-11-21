@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -130,6 +131,23 @@ class _FocusTimerState extends ConsumerState<_FocusTimer> {
   double workDuration = 25.0;
   double breakDuration = 5.0;
   bool isBreakPhase = false;
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && ref.read(focusSessionControllerProvider).value != null) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +165,6 @@ class _FocusTimerState extends ConsumerState<_FocusTimer> {
     final displayLabel = sessionLabel(referenceSession);
     final targetMinutes = sessionTargetMinutes(referenceSession);
     final controller = ref.read(focusSessionControllerProvider.notifier);
-    final isWide = MediaQuery.of(context).size.width > 900;
     final isProcessing = activeSessionState.isLoading;
 
     if (sessionsAsync.isLoading && activeSessionState.isLoading) {
@@ -202,98 +219,211 @@ class _FocusTimerState extends ConsumerState<_FocusTimer> {
               ),
             ),
             const SizedBox(height: 24, width: 24),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FilledButton.icon(
-                    onPressed: isProcessing
-                        ? null
-                        : () {
-                            if (activeSession != null) {
-                              controller.pauseSession();
-                            } else {
-                              controller.startSession(
-                                taskId: _selectedTaskId,
-                                targetMinutes: pomodoroEnabled
-                                    ? (isBreakPhase
-                                          ? breakDuration.round()
-                                          : workDuration.round())
-                                    : 30, // default
-                              );
-                            }
-                          },
-                    icon: Icon(
-                      activeSession != null
-                          ? Icons.pause_rounded
-                          : Icons.play_arrow_rounded,
+            // Conditional Expanded: Only expand in horizontal layout
+            horizontal
+                ? Expanded(
+                    child: _FocusControls(
+                      activeSession: activeSession,
+                      latestSession: latestSession,
+                      isProcessing: isProcessing,
+                      controller: controller,
+                      pomodoroEnabled: pomodoroEnabled,
+                      isBreakPhase: isBreakPhase,
+                      workDuration: workDuration,
+                      breakDuration: breakDuration,
+                      tasksAsync: widget.tasksAsync,
+                      selectedTaskId: _selectedTaskId,
+                      onTaskSelected: (val) =>
+                          setState(() => _selectedTaskId = val),
+                      onPhaseToggle: () =>
+                          setState(() => isBreakPhase = !isBreakPhase),
+                      onStartNew: () => _startNewSession(controller),
                     ),
-                    label: Text(
-                      activeSession != null
-                          ? 'Pause Session'
-                          : 'Start Focus Session',
-                    ),
+                  )
+                : _FocusControls(
+                    activeSession: activeSession,
+                    latestSession: latestSession,
+                    isProcessing: isProcessing,
+                    controller: controller,
+                    pomodoroEnabled: pomodoroEnabled,
+                    isBreakPhase: isBreakPhase,
+                    workDuration: workDuration,
+                    breakDuration: breakDuration,
+                    tasksAsync: widget.tasksAsync,
+                    selectedTaskId: _selectedTaskId,
+                    onTaskSelected: (val) =>
+                        setState(() => _selectedTaskId = val),
+                    onPhaseToggle: () =>
+                        setState(() => isBreakPhase = !isBreakPhase),
+                    onStartNew: () => _startNewSession(controller),
                   ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const FullScreenFocusTimer(),
-                          fullscreenDialog: true,
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.fullscreen),
-                    label: const Text('Full Screen Timer'),
-                  ),
-                  const SizedBox(height: 16),
-                  Text('Attach to task', style: theme.textTheme.labelLarge),
-                  const SizedBox(height: 8),
-                  widget.tasksAsync.when(
-                    data: (tasks) {
-                      if (tasks.isEmpty) {
-                        return const Text('No tasks available to link.');
-                      }
-                      return DropdownButtonFormField<String>(
-                        initialValue: _selectedTaskId,
-                        decoration: const InputDecoration(
-                          prefixIcon: Icon(Icons.task_alt_rounded),
-                        ),
-                        items: tasks
-                            .map(
-                              (task) => DropdownMenuItem(
-                                value: task.id,
-                                child: Text(task.title),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) =>
-                            setState(() => _selectedTaskId = value),
-                        hint: const Text('Link current focus to a task'),
-                      );
-                    },
-                    loading: () => const LinearProgressIndicator(),
-                    error: (error, _) => Text('Unable to load tasks: $error'),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: pomodoroEnabled
-                        ? () => setState(() => isBreakPhase = !isBreakPhase)
-                        : null,
-                    icon: Icon(isBreakPhase ? Icons.work : Icons.coffee_maker),
-                    label: Text(
-                      isBreakPhase
-                          ? 'Switch to Work (${workDuration.round()}min)'
-                          : 'Switch to Break (${breakDuration.round()}min)',
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ],
         );
       },
+    );
+  }
+
+  void _startNewSession(FocusSessionController controller) {
+    controller.startSession(
+      taskId: _selectedTaskId,
+      targetMinutes: pomodoroEnabled
+          ? (isBreakPhase ? breakDuration.round() : workDuration.round())
+          : 30, // default
+    );
+  }
+}
+
+class _FocusControls extends StatelessWidget {
+  const _FocusControls({
+    required this.activeSession,
+    required this.latestSession,
+    required this.isProcessing,
+    required this.controller,
+    required this.pomodoroEnabled,
+    required this.isBreakPhase,
+    required this.workDuration,
+    required this.breakDuration,
+    required this.tasksAsync,
+    required this.selectedTaskId,
+    required this.onTaskSelected,
+    required this.onPhaseToggle,
+    required this.onStartNew,
+  });
+
+  final FocusSession? activeSession;
+  final FocusSession? latestSession;
+  final bool isProcessing;
+  final FocusSessionController controller;
+  final bool pomodoroEnabled;
+  final bool isBreakPhase;
+  final double workDuration;
+  final double breakDuration;
+  final AsyncValue<List<Task>> tasksAsync;
+  final String? selectedTaskId;
+  final ValueChanged<String?> onTaskSelected;
+  final VoidCallback onPhaseToggle;
+  final VoidCallback onStartNew;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isResumable =
+        latestSession != null &&
+        latestSession!.endedAt != null &&
+        latestSession!.startedAt.day == DateTime.now().day;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (activeSession != null)
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: isProcessing ? null : controller.pauseSession,
+                  icon: const Icon(Icons.pause_rounded),
+                  label: const Text('Pause'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: isProcessing ? null : controller.pauseSession,
+                  icon: const Icon(Icons.check_circle_outline_rounded),
+                  label: const Text('Complete'),
+                ),
+              ),
+            ],
+          )
+        else if (isResumable)
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: isProcessing
+                      ? null
+                      : () => controller.resumeSession(latestSession!),
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text('Resume'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: isProcessing ? null : onStartNew,
+                  icon: const Icon(Icons.add_circle_outline_rounded),
+                  label: const Text('Start New'),
+                ),
+              ),
+            ],
+          )
+        else
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: isProcessing ? null : onStartNew,
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text('Start Focus Session'),
+            ),
+          ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const FullScreenFocusTimer(),
+                fullscreenDialog: true,
+              ),
+            );
+          },
+          icon: const Icon(Icons.fullscreen),
+          label: const Text('Full Screen Timer'),
+        ),
+        const SizedBox(height: 16),
+        Text('Attach to task', style: theme.textTheme.labelLarge),
+        const SizedBox(height: 8),
+        tasksAsync.when(
+          data: (tasks) {
+            if (tasks.isEmpty) {
+              return const Text('No tasks available to link.');
+            }
+            return InputDecorator(
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.task_alt_rounded),
+                contentPadding: EdgeInsets.fromLTRB(12, 12, 8, 12),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: selectedTaskId,
+                  isExpanded: true,
+                  hint: const Text('Link current focus to a task'),
+                  items: tasks
+                      .map(
+                        (task) => DropdownMenuItem(
+                          value: task.id,
+                          child: Text(task.title),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: onTaskSelected,
+                ),
+              ),
+            );
+          },
+          loading: () => const LinearProgressIndicator(),
+          error: (error, _) => Text('Unable to load tasks: $error'),
+        ),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: pomodoroEnabled ? onPhaseToggle : null,
+          icon: Icon(isBreakPhase ? Icons.work : Icons.coffee_maker),
+          label: Text(
+            isBreakPhase
+                ? 'Switch to Work (${workDuration.round()}min)'
+                : 'Switch to Break (${breakDuration.round()}min)',
+          ),
+        ),
+      ],
     );
   }
 }
@@ -311,7 +441,7 @@ class _FocusClockPainter extends CustomPainter {
     final backgroundPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..color = Colors.white.withOpacity(.15)
+      ..color = Colors.white.withValues(alpha: .15)
       ..strokeCap = StrokeCap.round;
     final progressPaint = Paint()
       ..style = PaintingStyle.stroke
@@ -390,7 +520,7 @@ class _SessionHistoryTile extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(.3),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: .3),
       ),
       child: Row(
         children: [
@@ -444,6 +574,7 @@ class _AmbientOptionsState extends State<_AmbientOptions> {
         ),
         if (_ambientSounds)
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _selectedSound,
             items: const [
               DropdownMenuItem(value: 'Rain', child: Text('Rain')),
@@ -487,7 +618,7 @@ class _StreakMetric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -521,7 +652,7 @@ class _PomodoroSettingsState extends State<_PomodoroSettings> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    // final theme = Theme.of(context); // Unused
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

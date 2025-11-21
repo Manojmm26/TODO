@@ -1,10 +1,11 @@
 # Chronos Roadmap - Future Functional Improvements
 
 ## Short-term (Next Release)
+## Short-term (Next Release)
 1. **Complete Dashboard**: [x] Finish daily digest, focus clock integration. [x] Interactive task quick-add, sub-task inline editing.
-2. **Timeline Enhancements**: [x] Drag-and-drop rescheduling. [x] Calendar view (day/week/month). ⏳ Filter by priority/project/goal/tags.
-3. **Focus Mode Polish**: ⏳ Full-screen timer with sounds/alarms. ⏳ Session history and streaks. ⏳ Break timers (Pomodoro 25/5).
-4. **Settings**: ⏳ Theme customization, notification prefs. ⏳ Data export/import (JSON/CSV).
+2. **Timeline Enhancements**: [x] Drag-and-drop rescheduling. [x] Calendar view (day/week/month). ⏳ Month switching in calendar. ⏳ Filter by priority/project/goal/tags.
+3. **Focus Mode Polish**: ⏳ Audio playback for ambient sounds/chimes. ⏳ Full-screen timer with sounds/alarms. ⏳ Session history details.
+4. **Settings**: ⏳ Native integration for startup/minimized. ⏳ Theme customization, notification prefs. ⏳ Data export/import (JSON/CSV).
 5. **Notifications**: ⏳ Due date reminders via flutter_local_notifications. ⏳ Launch at startup (desktop).
 
 *Progress: Dashboard & Timeline basics complete. Focus/Settings/Notifications next.*

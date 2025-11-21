@@ -8,7 +8,6 @@ import '../../application/providers.dart';
 import '../../application/sub_task_controller.dart';
 import '../../application/task_controller.dart';
 import '../../data/local/app_database.dart';
-import '../../shared/constants.dart';
 
 double subTaskCompletionProgress(List<SubTask> subTasks) {
   if (subTasks.isEmpty) return 0.0;
@@ -65,7 +64,7 @@ class TaskTile extends ConsumerWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(.4),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: .4),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,7 +195,7 @@ class _PriorityChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: color.withOpacity(.15),
+        color: color.withValues(alpha: .15),
       ),
       child: Text(
         priority.label,
@@ -304,12 +303,11 @@ class _AddSubTaskFieldState extends ConsumerState<_AddSubTaskField> {
         });
       }
     } catch (error) {
-      if (mounted) {
-        setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add sub-task: $error')),
-        );
-      }
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to add sub-task: $error')));
     }
   }
 }
@@ -461,12 +459,11 @@ class _SubTaskTileState extends ConsumerState<_SubTaskTile> {
         });
       }
     } catch (error) {
-      if (mounted) {
-        setState(() => _isSaving = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to rename: $error')));
-      }
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to rename: $error')));
     }
   }
 }

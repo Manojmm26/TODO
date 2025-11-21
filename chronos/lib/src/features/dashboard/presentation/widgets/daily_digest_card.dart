@@ -106,7 +106,7 @@ class _DigestMetric extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(.35),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: .35),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

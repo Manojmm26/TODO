@@ -81,8 +81,9 @@ double sessionProgress(FocusSession? session) {
 
 String sessionDurationDisplay(FocusSession? session) {
   if (session == null) return '00:00';
-  final minutes = sessionElapsedMinutes(session);
-  final duration = Duration(minutes: minutes.round());
+  final now = DateTime.now();
+  final end = session.endedAt ?? now;
+  final duration = end.difference(session.startedAt);
   final mm = duration.inMinutes.toString().padLeft(2, '0');
   final ss = (duration.inSeconds % 60).toString().padLeft(2, '0');
   return '$mm:$ss';
@@ -103,9 +104,9 @@ int? sessionTargetMinutes(FocusSession? session) {
 
 double sessionElapsedMinutes(FocusSession session) {
   if (session.endedAt != null) {
-    return session.endedAt!.difference(session.startedAt).inMinutes.toDouble();
+    return session.endedAt!.difference(session.startedAt).inSeconds / 60.0;
   }
-  return DateTime.now().difference(session.startedAt).inMinutes.toDouble();
+  return DateTime.now().difference(session.startedAt).inSeconds / 60.0;
 }
 
 int sessionDisplayMinutes(FocusSession session) {

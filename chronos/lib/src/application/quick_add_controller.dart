@@ -102,7 +102,7 @@ class QuickAddController {
 
   Future<void> unlinkTaskFromGoal(String taskId) {
     final companion = TasksCompanion(
-      goalId: const Value.absent(),
+      goalId: const Value(null),
       updatedAt: Value(DateTime.now()),
     );
     return _tasks.update(taskId, companion);

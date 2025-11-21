@@ -170,7 +170,7 @@ class _FocusClockPainter extends CustomPainter {
     final backgroundPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..color = Colors.white.withOpacity(.15)
+      ..color = Colors.white.withValues(alpha: .15)
       ..strokeCap = StrokeCap.round;
 
     final progressPaint = Paint()
@@ -214,7 +214,7 @@ class _FocusSummaryTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(.4),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: .4),
       ),
       child: Row(
         children: [

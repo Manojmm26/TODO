@@ -7,6 +7,7 @@
 ```
 Presentation (features/)
 ├── dashboard/     # Metrics, cards, dialogs
+│   └── widgets/   # Reusable dashboard components
 ├── timeline/      # Task list, filters
 ├── goals/         # Progress bars, lists
 ├── focus/         # Timer UI
@@ -21,7 +22,7 @@ Application (controllers)
 
 Data Layer
 ├── Repositories (chronos_repositories.dart)
-├── DAOs (app_database.dart)
+├── DAOs (daos/)
 └── DB Schema (Goals → Projects → Tasks → SubTasks)
 
 Core/Shared

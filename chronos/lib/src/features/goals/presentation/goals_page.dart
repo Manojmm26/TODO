@@ -165,7 +165,7 @@ class _GoalProgressTile extends ConsumerWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
-          colors: [color.withOpacity(.15), color.withOpacity(.05)],
+          colors: [color.withValues(alpha: .15), color.withValues(alpha: .05)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -214,7 +214,7 @@ class _GoalProgressTile extends ConsumerWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 10,
-              backgroundColor: Colors.white.withOpacity(.4),
+              backgroundColor: Colors.white.withValues(alpha: .4),
               valueColor: AlwaysStoppedAnimation(color),
             ),
           ),
@@ -322,7 +322,7 @@ class _MilestoneCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(.35),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: .35),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -399,7 +399,7 @@ class _MetaPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: tint.withOpacity(.08),
+        color: tint.withValues(alpha: .08),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -615,7 +615,8 @@ class _LinkExistingTaskDialogState
                         .read(quickAddControllerProvider)
                         .linkTaskToGoal(taskId, widget.goalId);
                   }
-                  if (mounted) Navigator.of(context).pop();
+                  if (!mounted) return;
+                  Navigator.of(context).pop();
                 },
           icon: const Icon(Icons.link),
           label: Text(

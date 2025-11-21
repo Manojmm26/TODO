@@ -38,6 +38,7 @@ class _ChronosAppState extends ConsumerState<ChronosApp>
   }
 
   // Log ALL window events
+
   @override
   void onWindowMoved() {
     debugPrint('🪟 onWindowMoved');
@@ -50,38 +51,33 @@ class _ChronosAppState extends ConsumerState<ChronosApp>
     _scheduleSaveWindowState();
   }
 
-  @override
   void onWindowMaximized() {
     debugPrint('🪟 onWindowMaximized');
     _scheduleSaveWindowState();
   }
 
-  @override
   void onWindowUnmaximized() {
     debugPrint('🪟 onWindowUnmaximized');
     _scheduleSaveWindowState();
   }
 
-  @override
   void onWindowMinimized() {
     debugPrint('🪟 onWindowMinimized');
   }
 
-  @override
   void onWindowRestored() {
     debugPrint('🪟 onWindowRestored');
   }
 
-  @override
   void onWindowEnteredFullScreen() {
     debugPrint('🪟 onWindowEnteredFullScreen');
   }
 
-  @override
   void onWindowExitedFullScreen() {
     debugPrint('🪟 onWindowExitedFullScreen');
   }
 
+  @override
   void onWindowClose() {
     debugPrint('🪟 onWindowClose() called');
     _saveWindowState();
@@ -104,7 +100,7 @@ class _ChronosAppState extends ConsumerState<ChronosApp>
       final size = await windowManager.getSize();
       final pos = await windowManager.getPosition();
 
-      print(
+      debugPrint(
         '🚪 SAVING window: ${size.width}x${size.height} @ ${pos.dx},${pos.dy}',
       );
 
@@ -117,10 +113,10 @@ class _ChronosAppState extends ConsumerState<ChronosApp>
 
       final savedW = prefs.getDouble('window_width');
       final savedH = prefs.getDouble('window_height');
-      print('💾 SAVED: ${savedW}x${savedH}');
+      debugPrint('💾 SAVED: ${savedW}x$savedH');
       final savedMax = prefs.getBool('window_is_maximized');
-      print('💾 Window maximized: ${savedMax ?? false}');
-      print('✅ Window state saved!');
+      debugPrint('💾 Window maximized: ${savedMax ?? false}');
+      debugPrint('✅ Window state saved!');
     }
   }
 

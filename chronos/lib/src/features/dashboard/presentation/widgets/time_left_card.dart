@@ -101,7 +101,9 @@ class TimeLeftCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(3),
                         color: isFilled
                             ? color
-                            : theme.colorScheme.onSurface.withOpacity(.12),
+                            : theme.colorScheme.onSurface.withValues(
+                                alpha: .12,
+                              ),
                       ),
                     ),
                   );
@@ -120,7 +122,7 @@ class TimeLeftCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(3),
                       color: isFilled
                           ? color
-                          : theme.colorScheme.onSurface.withOpacity(.12),
+                          : theme.colorScheme.onSurface.withValues(alpha: .12),
                     ),
                   );
                 }),

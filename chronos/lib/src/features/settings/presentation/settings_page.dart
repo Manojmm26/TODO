@@ -84,8 +84,9 @@ class SettingsPage extends ConsumerWidget {
                           final jsonString = await file.readAsString();
                           final jsonMap =
                               json.decode(jsonString) as Map<String, dynamic>;
-                          ref.read(settingsProvider.notifier).state =
-                              AppSettings.fromJson(jsonMap);
+                          ref
+                              .read(settingsProvider.notifier)
+                              .updateSettings(AppSettings.fromJson(jsonMap));
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(

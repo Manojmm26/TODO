@@ -180,9 +180,6 @@ class SettingsController extends StateNotifier<AppSettings> {
   }
 
   Future<void> updateLaunchAtStartup(bool value) async {
-    state = state.copyWith(launchAtStartup: value);
-    await _saveSettings();
-
     if (!kIsWeb) {
       try {
         if (value) {
@@ -192,10 +189,13 @@ class SettingsController extends StateNotifier<AppSettings> {
         }
       } catch (e) {
         debugPrint('Failed to update launch at startup: $e');
-        // Optionally revert state
-        // state = state.copyWith(launchAtStartup: !value);
+        // If native call fails, do NOT update state
+        return;
       }
     }
+
+    state = state.copyWith(launchAtStartup: value);
+    await _saveSettings();
   }
 
   void updateLaunchMinimized(bool value) {
@@ -230,6 +230,11 @@ class SettingsController extends StateNotifier<AppSettings> {
 
   void updateNotificationChimes(bool value) {
     state = state.copyWith(notificationChimes: value);
+    _saveSettings();
+  }
+
+  void updateSettings(AppSettings newSettings) {
+    state = newSettings;
     _saveSettings();
   }
 }

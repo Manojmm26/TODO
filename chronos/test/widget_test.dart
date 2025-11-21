@@ -8,7 +8,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
-import 'dart:ui';
 
 import 'package:chronos/src/app/chronos_app.dart';
 
@@ -16,8 +15,8 @@ void main() {
   testWidgets('Chronos app renders dashboard shell', (tester) async {
     // Give the test a large enough viewport to avoid layout overflows when
     // the dashboard has many side-by-side sections.
-    tester.binding.window.physicalSizeTestValue = const Size(3200, 2200);
-    addTearDown(tester.binding.window.clearPhysicalSizeTestValue);
+    tester.view.physicalSize = const Size(3200, 2200);
+    addTearDown(tester.view.resetPhysicalSize);
     await tester.pumpWidget(const ProviderScope(child: ChronosApp()));
     await tester.pumpAndSettle();
 

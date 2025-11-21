@@ -30,7 +30,8 @@ class RecurrenceCoordinator {
         }
       }
     } catch (e, st) {
-      debugPrint('Error in recurrence bootstrap: $e\n$st');
+      debugPrint('🔴 Error in recurrence bootstrap: $e\n$st');
+      // Consider rethrowing or exposing via a stream if critical
       rethrow;
     }
   }
@@ -45,7 +46,7 @@ class RecurrenceCoordinator {
 
       await _createOccurrence(template, after: task.dueDate ?? DateTime.now());
     } catch (e, st) {
-      debugPrint('Error handling task completion for ${task.id}: $e\n$st');
+      debugPrint('🔴 Error handling task completion for ${task.id}: $e\n$st');
       rethrow;
     }
   }

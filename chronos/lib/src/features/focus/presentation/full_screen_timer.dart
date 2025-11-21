@@ -18,14 +18,22 @@ class FullScreenFocusTimer extends ConsumerStatefulWidget {
 }
 
 class _FullScreenFocusTimerState extends ConsumerState<FullScreenFocusTimer> {
+  Timer? _ticker;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _enterFullScreen());
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted && ref.read(focusSessionControllerProvider).value != null) {
+        setState(() {});
+      }
+    });
   }
 
   @override
   void dispose() {
+    _ticker?.cancel();
     _exitFullScreen();
     super.dispose();
   }
@@ -165,12 +173,12 @@ class _LargeFocusClockPainter extends CustomPainter {
     final backgroundPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..color = Colors.white.withOpacity(0.2)
+      ..color = Colors.white.withValues(alpha: 0.2)
       ..strokeCap = StrokeCap.round;
     final progressPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..color = ChronosTheme.focusAccent.withOpacity(0.8)
+      ..color = ChronosTheme.focusAccent.withValues(alpha: 0.8)
       ..strokeCap = StrokeCap.round;
 
     canvas.drawCircle(center, radius, backgroundPaint);

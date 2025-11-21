@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:launch_at_startup/launch_at_startup.dart';
-import 'package:package_info_plus/package_info_plus.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -28,7 +28,7 @@ Future<void> main() async {
     final x = prefs.getDouble('window_x') ?? 100.0;
     final y = prefs.getDouble('window_y') ?? 100.0;
 
-    debugPrint('📐 LOADING window: ${width}x${height} @ ${x},${y}');
+    debugPrint('📐 LOADING window: ${width}x$height @ $x,$y');
 
     await windowManager.setSize(Size(width, height));
     await windowManager.setPosition(Offset(x, y));

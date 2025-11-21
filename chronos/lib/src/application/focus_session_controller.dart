@@ -25,6 +25,9 @@ class FocusSessionController extends AsyncNotifier<FocusSession?> {
     int targetMinutes = 30,
     String? notes,
   }) async {
+    final current = state.value;
+    if (current != null) return; // Prevent double start
+
     final repository = ref.read(focusRepositoryProvider);
     final session = FocusSessionsCompanion(
       id: Value(_uuid.v4()),
@@ -36,6 +39,16 @@ class FocusSessionController extends AsyncNotifier<FocusSession?> {
     );
     await repository.logSession(session);
     state = AsyncValue.data(await repository.activeSession());
+  }
+
+  Future<void> resumeSession(FocusSession previousSession) async {
+    // Start a new session with details from the previous one
+    await startSession(
+      taskId: previousSession.taskId,
+      projectId: previousSession.projectId,
+      targetMinutes: previousSession.durationMinutes,
+      notes: previousSession.notes,
+    );
   }
 
   Future<void> pauseSession() async {

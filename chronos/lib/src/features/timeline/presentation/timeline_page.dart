@@ -177,12 +177,14 @@ class TimelinePage extends ConsumerWidget {
                             duration: const Duration(milliseconds: 200),
                             decoration: BoxDecoration(
                               color: isDraggingOver
-                                  ? bucket.color.withOpacity(0.1)
+                                  ? bucket.color.withValues(alpha: 0.1)
                                   : null,
                               borderRadius: BorderRadius.circular(12),
                               border: isDraggingOver
                                   ? Border.all(
-                                      color: bucket.color.withOpacity(0.3),
+                                      color: bucket.color.withValues(
+                                        alpha: 0.3,
+                                      ),
                                       width: 2,
                                     )
                                   : null,
@@ -214,8 +216,7 @@ class TimelinePage extends ConsumerWidget {
                       ),
                     ),
                   ),
-                )
-                .toList(),
+                ),
           ],
         );
       },
@@ -293,7 +294,9 @@ class _TimelineRow extends ConsumerWidget {
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              color: theme.colorScheme.surfaceContainerHighest.withOpacity(.3),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: .3,
+              ),
             ),
             child: Row(
               children: [
@@ -376,7 +379,7 @@ class _TimelineRow extends ConsumerWidget {
                         backgroundColor: theme.colorScheme.surface,
                         valueColor: AlwaysStoppedAnimation(
                           isCompleted
-                              ? theme.hintColor.withOpacity(0.5)
+                              ? theme.hintColor.withValues(alpha: 0.5)
                               : bucket.color,
                         ),
                       ),
@@ -402,7 +405,9 @@ class _TimelineRow extends ConsumerWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            color: theme.colorScheme.surfaceContainerHighest.withOpacity(.3),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: .3,
+            ),
           ),
           child: Row(
             children: [
@@ -508,7 +513,9 @@ class _TimelineRow extends ConsumerWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: theme.colorScheme.surfaceContainerHighest.withOpacity(.3),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(
+            alpha: .3,
+          ),
         ),
         child: Row(
           children: [
@@ -616,7 +623,7 @@ class _PriorityChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -641,14 +648,39 @@ class _PriorityChip extends StatelessWidget {
   }
 }
 
-class CalendarView extends ConsumerWidget {
+class CalendarView extends ConsumerStatefulWidget {
   const CalendarView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CalendarView> createState() => _CalendarViewState();
+}
+
+class _CalendarViewState extends ConsumerState<CalendarView> {
+  late DateTime _focusedMonth;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusedMonth = DateTime.now();
+  }
+
+  void _prevMonth() {
+    setState(() {
+      _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month - 1);
+    });
+  }
+
+  void _nextMonth() {
+    setState(() {
+      _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final now = DateTime.now();
-    final firstDay = DateTime(now.year, now.month, 1);
-    final lastDay = DateTime(now.year, now.month + 1, 0);
+    final firstDay = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
+    final lastDay = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0);
     final daysInMonth = lastDay.day;
     final firstWeekday = firstDay.weekday % 7; // Sun=0
 
@@ -658,15 +690,30 @@ class CalendarView extends ConsumerWidget {
       data: (tasks) {
         final tasksByDay = <int, int>{};
         for (final task in tasks) {
-          if (task.dueDate != null && sameMonth(task.dueDate!, now)) {
+          if (task.dueDate != null && sameMonth(task.dueDate!, _focusedMonth)) {
             tasksByDay[task.dueDate!.day] =
                 (tasksByDay[task.dueDate!.day] ?? 0) + 1;
           }
         }
 
         return SectionCard(
-          title: DateFormat.yMMMM().format(now),
+          title: DateFormat.yMMMM().format(_focusedMonth),
           subtitle: 'Tap day to view tasks',
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: _prevMonth,
+                icon: const Icon(Icons.chevron_left_rounded),
+                tooltip: 'Previous month',
+              ),
+              IconButton(
+                onPressed: _nextMonth,
+                icon: const Icon(Icons.chevron_right_rounded),
+                tooltip: 'Next month',
+              ),
+            ],
+          ),
           child: Column(
             children: [
               // Weekday headers
@@ -699,15 +746,26 @@ class CalendarView extends ConsumerWidget {
                     return const SizedBox();
                   }
                   final count = tasksByDay[day] ?? 0;
-                  final isToday = now.day == day;
+                  final isToday =
+                      now.year == _focusedMonth.year &&
+                      now.month == _focusedMonth.month &&
+                      now.day == day;
                   return GestureDetector(
                     onTap: () {
                       ref
                           .read(timelineFilterProvider.notifier)
                           .setDateRange(
                             DateTimeRange(
-                              start: DateTime(now.year, now.month, day),
-                              end: DateTime(now.year, now.month, day),
+                              start: DateTime(
+                                _focusedMonth.year,
+                                _focusedMonth.month,
+                                day,
+                              ),
+                              end: DateTime(
+                                _focusedMonth.year,
+                                _focusedMonth.month,
+                                day,
+                              ),
                             ),
                           );
                     },
@@ -751,11 +809,6 @@ class CalendarView extends ConsumerWidget {
                     ),
                   );
                 },
-              ),
-              TextButton.icon(
-                onPressed: () {}, // TODO: Switch month
-                icon: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-                label: const Text('Next month'),
               ),
             ],
           ),

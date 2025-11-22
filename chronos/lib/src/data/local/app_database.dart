@@ -23,6 +23,7 @@ class Goals extends Table {
   TextColumn get description => text().nullable()();
   DateTimeColumn get targetDate => dateTime().nullable()();
   RealColumn get progressOverride => real().nullable()();
+  BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();
   IntColumn get colorHex => integer().withDefault(const Constant(0xFF7C4DFF))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
@@ -152,7 +153,16 @@ class ChronosDatabase extends _$ChronosDatabase {
   ChronosDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(goals, goals.isCompleted);
+      }
+    },
+  );
 }
 
 LazyDatabase _openConnection() {
@@ -168,4 +178,3 @@ final chronosDatabaseProvider = Provider<ChronosDatabase>((ref) {
   ref.onDispose(db.close);
   return db;
 });
-

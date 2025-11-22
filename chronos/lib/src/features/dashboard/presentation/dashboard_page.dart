@@ -44,7 +44,10 @@ class DashboardPage extends ConsumerWidget {
               ),
               SizedBox(
                 width: isWide ? width * .35 - 48 : width - 48,
-                child: GoalsProgress(goalsAsync: goalsAsync),
+                child: GoalsProgress(
+                  goalsAsync: goalsAsync,
+                  tasksAsync: tasksAsync,
+                ),
               ),
               SizedBox(
                 width: isWide ? width * .55 : width - 48,

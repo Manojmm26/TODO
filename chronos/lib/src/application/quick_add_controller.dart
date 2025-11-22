@@ -107,4 +107,13 @@ class QuickAddController {
     );
     return _tasks.update(taskId, companion);
   }
+
+  Future<void> toggleGoalCompletion(String goalId, bool isCompleted) {
+    final companion = GoalsCompanion(
+      isCompleted: Value(isCompleted),
+      updatedAt: Value(DateTime.now()),
+      id: Value(goalId),
+    );
+    return _goals.update(companion);
+  }
 }

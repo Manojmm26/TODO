@@ -146,10 +146,11 @@ class _GoalProgressTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final color = Color(goal.colorHex);
-    final progress = ((goal.progressOverride ?? 0.0).clamp(
-      0.0,
-      1.0,
-    )).toDouble();
+    final progress = goal.isCompleted
+        ? 1.0
+        : linkedTasks.isNotEmpty
+        ? linkedTasks.where(isTaskCompleted).length / linkedTasks.length
+        : ((goal.progressOverride ?? 0.0).clamp(0.0, 1.0)).toDouble();
     final totalLinked = linkedTasks.length;
     final completedLinked = linkedTasks.where(isTaskCompleted).length;
     final activeLinked = totalLinked - completedLinked;
@@ -204,6 +205,21 @@ class _GoalProgressTile extends ConsumerWidget {
                 '${(progress * 100).round()}%',
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: goal.isCompleted ? theme.colorScheme.primary : null,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Transform.scale(
+                scale: 1.2,
+                child: Checkbox(
+                  value: goal.isCompleted,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    ref
+                        .read(quickAddControllerProvider)
+                        .toggleGoalCompletion(goal.id, value);
+                  },
+                  shape: const CircleBorder(),
                 ),
               ),
             ],

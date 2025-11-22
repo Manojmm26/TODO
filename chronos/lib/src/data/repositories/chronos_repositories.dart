@@ -15,6 +15,7 @@ class GoalRepository {
   Stream<List<Goal>> watchGoals() => _dao.watchGoals();
   Future<List<Goal>> fetchGoals() => _dao.getGoals();
   Future<void> upsert(GoalsCompanion goal) => _dao.upsertGoal(goal);
+  Future<void> update(GoalsCompanion goal) => _dao.updateGoal(goal);
   Future<void> delete(String id) => _dao.deleteGoal(id).then((_) => null);
 }
 

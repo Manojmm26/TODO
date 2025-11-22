@@ -5,9 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/local/app_database.dart';
 
 class GoalsProgress extends StatelessWidget {
-  const GoalsProgress({super.key, required this.goalsAsync});
+  const GoalsProgress({
+    super.key,
+    required this.goalsAsync,
+    required this.tasksAsync,
+  });
 
   final AsyncValue<List<Goal>> goalsAsync;
+  final AsyncValue<List<Task>> tasksAsync;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +38,20 @@ class GoalsProgress extends StatelessWidget {
                 )
               : Column(
                   children: goals.map((goal) {
-                    final progress = goal.progressOverride ?? 0.0;
+                    final tasks = tasksAsync.value ?? [];
+                    final linkedTasks = tasks
+                        .where((t) => t.goalId == goal.id)
+                        .toList();
+                    final progress = goal.isCompleted
+                        ? 1.0
+                        : linkedTasks.isNotEmpty
+                        ? linkedTasks
+                                  .where(
+                                    (t) => t.status >= 1,
+                                  ) // taskStatusCompleted
+                                  .length /
+                              linkedTasks.length
+                        : (goal.progressOverride ?? 0.0);
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Column(

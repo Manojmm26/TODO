@@ -12,6 +12,8 @@ class GoalDao extends DatabaseAccessor<ChronosDatabase> with _$GoalDaoMixin {
   Future<List<Goal>> getGoals() => select(goals).get();
   Future<void> upsertGoal(GoalsCompanion goal) =>
       into(goals).insertOnConflictUpdate(goal);
+  Future<void> updateGoal(GoalsCompanion goal) =>
+      (update(goals)..where((tbl) => tbl.id.equals(goal.id.value))).write(goal);
   Future<int> deleteGoal(String id) =>
       (delete(goals)..where((tbl) => tbl.id.equals(id))).go();
 }

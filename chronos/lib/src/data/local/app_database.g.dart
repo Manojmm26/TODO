@@ -59,6 +59,21 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isCompletedMeta = const VerificationMeta(
+    'isCompleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isCompleted = GeneratedColumn<bool>(
+    'is_completed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_completed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _colorHexMeta = const VerificationMeta(
     'colorHex',
   );
@@ -102,6 +117,7 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     description,
     targetDate,
     progressOverride,
+    isCompleted,
     colorHex,
     createdAt,
     updatedAt,
@@ -155,6 +171,15 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
         ),
       );
     }
+    if (data.containsKey('is_completed')) {
+      context.handle(
+        _isCompletedMeta,
+        isCompleted.isAcceptableOrUnknown(
+          data['is_completed']!,
+          _isCompletedMeta,
+        ),
+      );
+    }
     if (data.containsKey('color_hex')) {
       context.handle(
         _colorHexMeta,
@@ -202,6 +227,10 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
         DriftSqlType.double,
         data['${effectivePrefix}progress_override'],
       ),
+      isCompleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_completed'],
+      )!,
       colorHex: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}color_hex'],
@@ -229,6 +258,7 @@ class Goal extends DataClass implements Insertable<Goal> {
   final String? description;
   final DateTime? targetDate;
   final double? progressOverride;
+  final bool isCompleted;
   final int colorHex;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -238,6 +268,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     this.description,
     this.targetDate,
     this.progressOverride,
+    required this.isCompleted,
     required this.colorHex,
     required this.createdAt,
     required this.updatedAt,
@@ -256,6 +287,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     if (!nullToAbsent || progressOverride != null) {
       map['progress_override'] = Variable<double>(progressOverride);
     }
+    map['is_completed'] = Variable<bool>(isCompleted);
     map['color_hex'] = Variable<int>(colorHex);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
@@ -275,6 +307,7 @@ class Goal extends DataClass implements Insertable<Goal> {
       progressOverride: progressOverride == null && nullToAbsent
           ? const Value.absent()
           : Value(progressOverride),
+      isCompleted: Value(isCompleted),
       colorHex: Value(colorHex),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
@@ -292,6 +325,7 @@ class Goal extends DataClass implements Insertable<Goal> {
       description: serializer.fromJson<String?>(json['description']),
       targetDate: serializer.fromJson<DateTime?>(json['targetDate']),
       progressOverride: serializer.fromJson<double?>(json['progressOverride']),
+      isCompleted: serializer.fromJson<bool>(json['isCompleted']),
       colorHex: serializer.fromJson<int>(json['colorHex']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -306,6 +340,7 @@ class Goal extends DataClass implements Insertable<Goal> {
       'description': serializer.toJson<String?>(description),
       'targetDate': serializer.toJson<DateTime?>(targetDate),
       'progressOverride': serializer.toJson<double?>(progressOverride),
+      'isCompleted': serializer.toJson<bool>(isCompleted),
       'colorHex': serializer.toJson<int>(colorHex),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -318,6 +353,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     Value<String?> description = const Value.absent(),
     Value<DateTime?> targetDate = const Value.absent(),
     Value<double?> progressOverride = const Value.absent(),
+    bool? isCompleted,
     int? colorHex,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -329,6 +365,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     progressOverride: progressOverride.present
         ? progressOverride.value
         : this.progressOverride,
+    isCompleted: isCompleted ?? this.isCompleted,
     colorHex: colorHex ?? this.colorHex,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -346,6 +383,9 @@ class Goal extends DataClass implements Insertable<Goal> {
       progressOverride: data.progressOverride.present
           ? data.progressOverride.value
           : this.progressOverride,
+      isCompleted: data.isCompleted.present
+          ? data.isCompleted.value
+          : this.isCompleted,
       colorHex: data.colorHex.present ? data.colorHex.value : this.colorHex,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -360,6 +400,7 @@ class Goal extends DataClass implements Insertable<Goal> {
           ..write('description: $description, ')
           ..write('targetDate: $targetDate, ')
           ..write('progressOverride: $progressOverride, ')
+          ..write('isCompleted: $isCompleted, ')
           ..write('colorHex: $colorHex, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -374,6 +415,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     description,
     targetDate,
     progressOverride,
+    isCompleted,
     colorHex,
     createdAt,
     updatedAt,
@@ -387,6 +429,7 @@ class Goal extends DataClass implements Insertable<Goal> {
           other.description == this.description &&
           other.targetDate == this.targetDate &&
           other.progressOverride == this.progressOverride &&
+          other.isCompleted == this.isCompleted &&
           other.colorHex == this.colorHex &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -398,6 +441,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   final Value<String?> description;
   final Value<DateTime?> targetDate;
   final Value<double?> progressOverride;
+  final Value<bool> isCompleted;
   final Value<int> colorHex;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -408,6 +452,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     this.description = const Value.absent(),
     this.targetDate = const Value.absent(),
     this.progressOverride = const Value.absent(),
+    this.isCompleted = const Value.absent(),
     this.colorHex = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -419,6 +464,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     this.description = const Value.absent(),
     this.targetDate = const Value.absent(),
     this.progressOverride = const Value.absent(),
+    this.isCompleted = const Value.absent(),
     this.colorHex = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -431,6 +477,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     Expression<String>? description,
     Expression<DateTime>? targetDate,
     Expression<double>? progressOverride,
+    Expression<bool>? isCompleted,
     Expression<int>? colorHex,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -442,6 +489,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       if (description != null) 'description': description,
       if (targetDate != null) 'target_date': targetDate,
       if (progressOverride != null) 'progress_override': progressOverride,
+      if (isCompleted != null) 'is_completed': isCompleted,
       if (colorHex != null) 'color_hex': colorHex,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -455,6 +503,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     Value<String?>? description,
     Value<DateTime?>? targetDate,
     Value<double?>? progressOverride,
+    Value<bool>? isCompleted,
     Value<int>? colorHex,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -466,6 +515,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       description: description ?? this.description,
       targetDate: targetDate ?? this.targetDate,
       progressOverride: progressOverride ?? this.progressOverride,
+      isCompleted: isCompleted ?? this.isCompleted,
       colorHex: colorHex ?? this.colorHex,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -491,6 +541,9 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     if (progressOverride.present) {
       map['progress_override'] = Variable<double>(progressOverride.value);
     }
+    if (isCompleted.present) {
+      map['is_completed'] = Variable<bool>(isCompleted.value);
+    }
     if (colorHex.present) {
       map['color_hex'] = Variable<int>(colorHex.value);
     }
@@ -514,6 +567,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
           ..write('description: $description, ')
           ..write('targetDate: $targetDate, ')
           ..write('progressOverride: $progressOverride, ')
+          ..write('isCompleted: $isCompleted, ')
           ..write('colorHex: $colorHex, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -4091,6 +4145,7 @@ typedef $$GoalsTableCreateCompanionBuilder =
       Value<String?> description,
       Value<DateTime?> targetDate,
       Value<double?> progressOverride,
+      Value<bool> isCompleted,
       Value<int> colorHex,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -4103,6 +4158,7 @@ typedef $$GoalsTableUpdateCompanionBuilder =
       Value<String?> description,
       Value<DateTime?> targetDate,
       Value<double?> progressOverride,
+      Value<bool> isCompleted,
       Value<int> colorHex,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -4183,6 +4239,11 @@ class $$GoalsTableFilterComposer
 
   ColumnFilters<double> get progressOverride => $composableBuilder(
     column: $table.progressOverride,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isCompleted => $composableBuilder(
+    column: $table.isCompleted,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4286,6 +4347,11 @@ class $$GoalsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isCompleted => $composableBuilder(
+    column: $table.isCompleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get colorHex => $composableBuilder(
     column: $table.colorHex,
     builder: (column) => ColumnOrderings(column),
@@ -4329,6 +4395,11 @@ class $$GoalsTableAnnotationComposer
 
   GeneratedColumn<double> get progressOverride => $composableBuilder(
     column: $table.progressOverride,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isCompleted => $composableBuilder(
+    column: $table.isCompleted,
     builder: (column) => column,
   );
 
@@ -4425,6 +4496,7 @@ class $$GoalsTableTableManager
                 Value<String?> description = const Value.absent(),
                 Value<DateTime?> targetDate = const Value.absent(),
                 Value<double?> progressOverride = const Value.absent(),
+                Value<bool> isCompleted = const Value.absent(),
                 Value<int> colorHex = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -4435,6 +4507,7 @@ class $$GoalsTableTableManager
                 description: description,
                 targetDate: targetDate,
                 progressOverride: progressOverride,
+                isCompleted: isCompleted,
                 colorHex: colorHex,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -4447,6 +4520,7 @@ class $$GoalsTableTableManager
                 Value<String?> description = const Value.absent(),
                 Value<DateTime?> targetDate = const Value.absent(),
                 Value<double?> progressOverride = const Value.absent(),
+                Value<bool> isCompleted = const Value.absent(),
                 Value<int> colorHex = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -4457,6 +4531,7 @@ class $$GoalsTableTableManager
                 description: description,
                 targetDate: targetDate,
                 progressOverride: progressOverride,
+                isCompleted: isCompleted,
                 colorHex: colorHex,
                 createdAt: createdAt,
                 updatedAt: updatedAt,

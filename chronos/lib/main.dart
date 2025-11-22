@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'src/app/chronos_app.dart';
+import 'src/services/system_tray_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,13 +33,21 @@ Future<void> main() async {
 
     await windowManager.setSize(Size(width, height));
     await windowManager.setPosition(Offset(x, y));
-    await windowManager.show();
+
+    // Initialize System Tray & Window Listeners
+    await SystemTrayService().init();
+
+    // Start hidden (minimized to tray)
+    await windowManager.hide();
+    await windowManager.setPreventClose(true);
+
     final isMax = prefs.getBool('window_is_maximized') ?? false;
     if (isMax) {
-      await windowManager.maximize();
-      debugPrint('✅ Window maximized on startup');
+      // We don't maximize immediately if hidden, but we can restore state later if needed.
+      // For now, just logging it.
+      debugPrint('✅ Window was maximized, will restore when shown');
     }
-    debugPrint('✅ Window restored');
+    debugPrint('✅ Window restored (hidden)');
   }
 
   runApp(const ProviderScope(child: ChronosApp()));

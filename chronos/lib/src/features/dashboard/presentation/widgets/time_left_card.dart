@@ -58,8 +58,7 @@ class TimeLeftCard extends StatelessWidget {
       final days = minutes ~/ (60 * 24);
       final hours = (minutes % (60 * 24)) ~/ 60;
       if (days > 0) return '${days}d ${hours}h';
-      if (hours > 0) return '${hours}h';
-      return '${minutes}m';
+      return '${hours}h';
     }
 
     Widget buildRow(
@@ -67,11 +66,11 @@ class TimeLeftCard extends StatelessWidget {
       int filled,
       int total,
       String subtitle, {
-      bool wrap = true,
+      bool wrap = false,
     }) {
-      final color = ChronosTheme.focusAccent;
+      final color = Theme.of(context).extension<CustomColors>()!.focusAccent!;
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.only(bottom: 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -79,7 +78,7 @@ class TimeLeftCard extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: theme.textTheme.bodyLarge?.copyWith(
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -137,7 +136,13 @@ class TimeLeftCard extends StatelessWidget {
       subtitle: 'Remaining time for today, this week and this month',
       child: Column(
         children: [
-          buildRow('Today', todayDots, _dotCount, fmtMinutes(minutesTodayLeft)),
+          buildRow(
+            'Today',
+            todayDots,
+            _dotCount,
+            fmtMinutes(minutesTodayLeft),
+            wrap: true,
+          ),
           buildRow(
             'Week',
             weekDots,

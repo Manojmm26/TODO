@@ -191,7 +191,12 @@ class _FocusTimerState extends ConsumerState<_FocusTimer> {
               height: 220,
               width: 220,
               child: CustomPaint(
-                painter: _FocusClockPainter(progress: progress),
+                painter: _FocusClockPainter(
+                  progress: progress,
+                  color: Theme.of(
+                    context,
+                  ).extension<CustomColors>()!.focusAccent!,
+                ),
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -429,9 +434,10 @@ class _FocusControls extends StatelessWidget {
 }
 
 class _FocusClockPainter extends CustomPainter {
-  _FocusClockPainter({required this.progress});
+  _FocusClockPainter({required this.progress, required this.color});
 
   final double progress;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -446,7 +452,7 @@ class _FocusClockPainter extends CustomPainter {
     final progressPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..color = ChronosTheme.focusAccent
+      ..color = color
       ..strokeCap = StrokeCap.round;
 
     canvas.drawCircle(center, radius, backgroundPaint);
@@ -462,7 +468,7 @@ class _FocusClockPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _FocusClockPainter oldDelegate) =>
-      oldDelegate.progress != progress;
+      oldDelegate.progress != progress || oldDelegate.color != color;
 }
 
 class _SessionHistory extends StatelessWidget {
@@ -526,7 +532,7 @@ class _SessionHistoryTile extends StatelessWidget {
         children: [
           Icon(
             isActive ? Icons.play_circle_fill : Icons.timer_rounded,
-            color: ChronosTheme.focusAccent,
+            color: Theme.of(context).extension<CustomColors>()!.focusAccent!,
           ),
           const SizedBox(width: 12),
           Expanded(

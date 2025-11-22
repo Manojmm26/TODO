@@ -4,16 +4,38 @@ import 'package:google_fonts/google_fonts.dart';
 
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
 
+enum AppThemeVariant {
+  chronos('Chronos', Color(0xFF6750A4), Color(0xFF00BFA5)),
+  nature('Nature', Color(0xFF2E7D32), Color(0xFFAED581)),
+  ocean('Ocean', Color(0xFF0277BD), Color(0xFF4FC3F7)),
+  sunset('Sunset', Color(0xFFD84315), Color(0xFFFFAB91)),
+  midnight('Midnight', Color(0xFF311B92), Color(0xFF7C4DFF)),
+  custom('Custom', Colors.grey, Colors.grey);
+
+  final String label;
+  final Color seedColor;
+  final Color accentColor;
+
+  const AppThemeVariant(this.label, this.seedColor, this.accentColor);
+}
+
 class ChronosTheme {
   ChronosTheme._();
 
-  static const Color seedColor = Color(0xFF6750A4);
-  static const Color focusAccent = Color(0xFF00BFA5);
+  static ThemeData light(AppThemeVariant variant, {Color? customColor}) =>
+      _buildTheme(Brightness.light, variant, customColor: customColor);
+  static ThemeData dark(AppThemeVariant variant, {Color? customColor}) =>
+      _buildTheme(Brightness.dark, variant, customColor: customColor);
 
-  static ThemeData get light => _buildTheme(Brightness.light);
-  static ThemeData get dark => _buildTheme(Brightness.dark);
+  static ThemeData _buildTheme(
+    Brightness brightness,
+    AppThemeVariant variant, {
+    Color? customColor,
+  }) {
+    final seedColor = variant == AppThemeVariant.custom
+        ? (customColor ?? const Color(0xFF6750A4))
+        : variant.seedColor;
 
-  static ThemeData _buildTheme(Brightness brightness) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: brightness,
@@ -49,6 +71,35 @@ class ChronosTheme {
         thickness: 1,
         color: colorScheme.outlineVariant,
       ),
+      extensions: [
+        CustomColors(
+          focusAccent: variant == AppThemeVariant.custom
+              ? colorScheme.primary
+              : variant.accentColor,
+        ),
+      ],
+    );
+  }
+}
+
+@immutable
+class CustomColors extends ThemeExtension<CustomColors> {
+  const CustomColors({required this.focusAccent});
+
+  final Color? focusAccent;
+
+  @override
+  CustomColors copyWith({Color? focusAccent}) {
+    return CustomColors(focusAccent: focusAccent ?? this.focusAccent);
+  }
+
+  @override
+  CustomColors lerp(ThemeExtension<CustomColors>? other, double t) {
+    if (other is! CustomColors) {
+      return this;
+    }
+    return CustomColors(
+      focusAccent: Color.lerp(focusAccent, other.focusAccent, t),
     );
   }
 }

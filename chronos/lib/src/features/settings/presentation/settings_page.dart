@@ -1,5 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:chronos/src/core/theme/app_theme.dart';
+
+import 'widgets/custom_color_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -8,6 +11,7 @@ import '../../../shared/widgets/section_card.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../application/providers.dart';
+
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -120,17 +124,114 @@ class _AppearanceSettingsState extends ConsumerState<_AppearanceSettings> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
+    final theme = Theme.of(context);
+
     return Column(
-      children: ThemeMode.values.map((mode) {
-        return RadioListTile<ThemeMode>(
-          value: mode,
-          groupValue: settings.themeMode,
-          onChanged: (value) =>
-              ref.read(settingsProvider.notifier).updateThemeMode(value!),
-          title: Text(mode.name.toUpperCase()),
-          subtitle: Text(_labelForMode(mode)),
-        );
-      }).toList(),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Theme Mode', style: theme.textTheme.labelLarge),
+        const SizedBox(height: 8),
+        ...ThemeMode.values.map((mode) {
+          return RadioListTile<ThemeMode>(
+            value: mode,
+            groupValue: settings.themeMode,
+            onChanged: (value) =>
+                ref.read(settingsProvider.notifier).updateThemeMode(value!),
+            title: Text(mode.name.toUpperCase()),
+            subtitle: Text(_labelForMode(mode)),
+            contentPadding: EdgeInsets.zero,
+          );
+        }),
+        const SizedBox(height: 24),
+        Text('Color Theme', style: theme.textTheme.labelLarge),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: AppThemeVariant.values.map((variant) {
+            final isSelected = settings.themeVariant == variant;
+            return InkWell(
+              onTap: () => ref
+                  .read(settingsProvider.notifier)
+                  .updateThemeVariant(variant),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 100,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: isSelected
+                        ? theme.colorScheme.primary
+                        : theme.dividerColor.withValues(alpha: 0.2),
+                    width: isSelected ? 2 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  color: isSelected
+                      ? theme.colorScheme.primaryContainer.withValues(
+                          alpha: 0.2,
+                        )
+                      : null,
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: variant.seedColor,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: variant.seedColor.withValues(alpha: 0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: variant.accentColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      variant.label,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: isSelected ? FontWeight.bold : null,
+                        color: isSelected ? theme.colorScheme.primary : null,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        if (settings.themeVariant == AppThemeVariant.custom) ...[
+          const SizedBox(height: 32),
+          Center(
+            child: HueRingPicker(
+              color: Color(settings.customThemeColorValue),
+              onColorChanged: (color) {
+                ref
+                    .read(settingsProvider.notifier)
+                    .updateCustomThemeColor(color.value);
+              },
+            ),
+          ),
+        ],
+      ],
     );
   }
 

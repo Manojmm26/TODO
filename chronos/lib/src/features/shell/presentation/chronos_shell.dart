@@ -123,11 +123,16 @@ class _SidebarNavigation extends StatelessWidget {
               'Chronos',
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: ChronosTheme.focusAccent,
+                color: Theme.of(
+                  context,
+                ).extension<CustomColors>()!.focusAccent!,
               ),
             ),
           if (isCollapsed)
-            Icon(Icons.watch_later, color: ChronosTheme.focusAccent),
+            Icon(
+              Icons.watch_later,
+              color: Theme.of(context).extension<CustomColors>()!.focusAccent!,
+            ),
           const SizedBox(height: 24),
           ...List.generate(chronosSections.length, (index) {
             final section = chronosSections[index];
@@ -154,7 +159,7 @@ class _SidebarNavigation extends StatelessWidget {
                     minHeight: 6,
                     backgroundColor: theme.dividerColor.withValues(alpha: 0.3),
                     valueColor: AlwaysStoppedAnimation(
-                      ChronosTheme.focusAccent,
+                      Theme.of(context).extension<CustomColors>()!.focusAccent!,
                     ),
                   ),
                 ),
@@ -210,7 +215,9 @@ class _NavTile extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
           color: isSelected
-              ? ChronosTheme.focusAccent.withValues(alpha: .15)
+              ? Theme.of(
+                  context,
+                ).extension<CustomColors>()!.focusAccent!.withValues(alpha: .15)
               : Colors.transparent,
         ),
         child: isCollapsed
@@ -218,7 +225,9 @@ class _NavTile extends StatelessWidget {
                 child: Icon(
                   section.icon,
                   color: isSelected
-                      ? ChronosTheme.focusAccent
+                      ? Theme.of(
+                          context,
+                        ).extension<CustomColors>()!.focusAccent!
                       : colorScheme.onSurfaceVariant,
                 ),
               )
@@ -227,7 +236,9 @@ class _NavTile extends StatelessWidget {
                   Icon(
                     section.icon,
                     color: isSelected
-                        ? ChronosTheme.focusAccent
+                        ? Theme.of(
+                            context,
+                          ).extension<CustomColors>()!.focusAccent!
                         : colorScheme.onSurfaceVariant,
                   ),
                   Expanded(
@@ -242,7 +253,9 @@ class _NavTile extends StatelessWidget {
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: isSelected
-                                  ? ChronosTheme.focusAccent
+                                  ? Theme.of(
+                                      context,
+                                    ).extension<CustomColors>()!.focusAccent!
                                   : colorScheme.onSurface,
                             ),
                             overflow: TextOverflow.ellipsis,

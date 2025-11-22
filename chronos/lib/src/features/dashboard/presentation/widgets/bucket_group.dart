@@ -96,7 +96,9 @@ class _BucketGroupState extends State<BucketGroup> {
                     Icon(
                       Icons.check_circle_outline,
                       size: 48,
-                      color: ChronosTheme.focusAccent,
+                      color: Theme.of(
+                        context,
+                      ).extension<CustomColors>()!.focusAccent!,
                     ),
                   const SizedBox(height: 8),
                   Text(

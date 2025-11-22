@@ -5,9 +5,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'package:window_manager/window_manager.dart';
 
-import '../core/theme/app_theme.dart';
+import '../core/theme/app_theme.dart' hide themeModeProvider;
 import '../routing/app_router.dart';
 import '../application/recurrence_coordinator.dart';
+
+import '../application/providers.dart';
 
 class ChronosApp extends ConsumerStatefulWidget {
   const ChronosApp({super.key});
@@ -129,6 +131,7 @@ class _ChronosAppState extends ConsumerState<ChronosApp>
   @override
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
+    final settings = ref.watch(settingsProvider);
     final router = ref.watch(appRouterProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final recurrence = ref.read(recurrenceCoordinatorProvider);
@@ -140,8 +143,14 @@ class _ChronosAppState extends ConsumerState<ChronosApp>
     return MaterialApp.router(
       title: 'Chronos',
       debugShowCheckedModeBanner: false,
-      theme: ChronosTheme.light,
-      darkTheme: ChronosTheme.dark,
+      theme: ChronosTheme.light(
+        settings.themeVariant,
+        customColor: Color(settings.customThemeColorValue),
+      ),
+      darkTheme: ChronosTheme.dark(
+        settings.themeVariant,
+        customColor: Color(settings.customThemeColorValue),
+      ),
       themeMode: themeMode,
       routerConfig: router,
     );

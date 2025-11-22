@@ -93,7 +93,12 @@ class _FullScreenFocusTimerState extends ConsumerState<FullScreenFocusTimer> {
                   width: 400,
                   height: 400,
                   child: CustomPaint(
-                    painter: _LargeFocusClockPainter(progress: progress),
+                    painter: _LargeFocusClockPainter(
+                      progress: progress,
+                      color: Theme.of(
+                        context,
+                      ).extension<CustomColors>()!.focusAccent!,
+                    ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -161,9 +166,10 @@ class _FullScreenFocusTimerState extends ConsumerState<FullScreenFocusTimer> {
 }
 
 class _LargeFocusClockPainter extends CustomPainter {
-  const _LargeFocusClockPainter({required this.progress});
+  const _LargeFocusClockPainter({required this.progress, required this.color});
 
   final double progress;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -178,7 +184,7 @@ class _LargeFocusClockPainter extends CustomPainter {
     final progressPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..color = ChronosTheme.focusAccent.withValues(alpha: 0.8)
+      ..color = color.withValues(alpha: 0.8)
       ..strokeCap = StrokeCap.round;
 
     canvas.drawCircle(center, radius, backgroundPaint);
@@ -194,5 +200,5 @@ class _LargeFocusClockPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _LargeFocusClockPainter oldDelegate) =>
-      oldDelegate.progress != progress;
+      oldDelegate.progress != progress || oldDelegate.color != color;
 }

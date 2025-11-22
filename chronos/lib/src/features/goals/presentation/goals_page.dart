@@ -358,8 +358,8 @@ class _MilestoneCard extends StatelessWidget {
               value: progress,
               minHeight: 6,
               backgroundColor: theme.colorScheme.surface,
-              valueColor: const AlwaysStoppedAnimation(
-                ChronosTheme.focusAccent,
+              valueColor: AlwaysStoppedAnimation(
+                Theme.of(context).extension<CustomColors>()!.focusAccent!,
               ),
             ),
           ),

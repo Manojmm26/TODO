@@ -44,155 +44,129 @@ class FocusClockCard extends ConsumerWidget {
             icon: const Icon(Icons.more_horiz),
             label: const Text('History'),
           ),
-          child: Row(
+          child: Column(
             children: [
-              Expanded(
-                child: SizedBox(
-                  height: 200,
-                  child: CustomPaint(
-                    painter: _FocusClockPainter(progress: progress),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            displayLabel,
-                            style: theme.textTheme.titleMedium,
+              SizedBox(
+                height: 200,
+                width: 200,
+                child: CustomPaint(
+                  painter: _FocusClockPainter(
+                    progress: progress,
+                    color: Theme.of(
+                      context,
+                    ).extension<CustomColors>()!.focusAccent!,
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(displayLabel, style: theme.textTheme.titleMedium),
+                        const SizedBox(height: 4),
+                        Text(
+                          displayDuration,
+                          style: theme.textTheme.displaySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
                           ),
-                          const SizedBox(height: 6),
+                        ),
+                        if (targetMinutes != null)
                           Text(
-                            displayDuration,
-                            style: theme.textTheme.displaySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            'of $targetMinutes min',
+                            style: theme.textTheme.labelSmall,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            targetMinutes != null
-                                ? 'of $targetMinutes mins'
-                                : 'No target',
-                            style: theme.textTheme.labelMedium,
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 24),
+              if (activeSession != null)
+                Row(
                   children: [
-                    FilledButton.icon(
-                      onPressed: () {
-                        if (activeSession != null) {
-                          focusController.pauseSession();
-                        } else {
-                          focusController.startSession();
-                        }
-                      },
-                      icon: Icon(
-                        activeSession != null
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                      ),
-                      label: Text(
-                        activeSession != null
-                            ? 'Pause Session'
-                            : 'Start Session',
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () => focusController.pauseSession(),
+                        icon: const Icon(Icons.pause_rounded),
+                        label: const Text('Pause'),
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    if (recentSessions.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.access_time_outlined,
-                              size: 48,
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'No focus sessions logged yet.',
-                              style: theme.textTheme.bodySmall,
-                            ),
-                            const SizedBox(height: 16),
-                            OutlinedButton.icon(
-                              onPressed: () => focusController.startSession(),
-                              icon: const Icon(Icons.play_arrow_rounded),
-                              label: const Text('Start your first'),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      ...recentSessions.map(
-                        (session) => _FocusSummaryTile(session: session),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => focusController.pauseSession(),
+                        icon: const Icon(Icons.stop_rounded),
+                        label: const Text('End'),
                       ),
+                    ),
                   ],
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => focusController.startSession(),
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: const Text('Start Focus'),
+                  ),
                 ),
-              ),
+              const SizedBox(height: 24),
+              if (recentSessions.isNotEmpty) ...[
+                const Divider(),
+                const SizedBox(height: 12),
+                ...recentSessions.map(
+                  (session) => _FocusSummaryTile(session: session),
+                ),
+              ],
             ],
           ),
         );
       },
-      loading: () => const Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Center(child: CircularProgressIndicator()),
-        ),
+      loading: () => const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
       ),
-      error: (error, stackTrace) => Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text('Unable to load focus sessions: $error'),
-        ),
-      ),
+      error: (error, _) => Text('Error: $error'),
     );
   }
 }
 
 class _FocusClockPainter extends CustomPainter {
-  _FocusClockPainter({required this.progress});
+  _FocusClockPainter({required this.progress, required this.color});
 
   final double progress;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
-    final strokeWidth = 16.0;
+    const strokeWidth = 16.0;
     final radius = (size.shortestSide - strokeWidth) / 2;
-    final backgroundPaint = Paint()
+
+    final bgPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..color = Colors.white.withValues(alpha: .15)
+      ..color = Colors.grey.withValues(alpha: 0.2)
       ..strokeCap = StrokeCap.round;
 
-    final progressPaint = Paint()
+    final fgPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..color = ChronosTheme.focusAccent
+      ..color = color
       ..strokeCap = StrokeCap.round;
 
-    canvas.drawCircle(center, radius, backgroundPaint);
-    final sweepAngle = 2 * math.pi * progress;
+    canvas.drawCircle(center, radius, bgPaint);
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       -math.pi / 2,
-      sweepAngle,
+      2 * math.pi * progress,
       false,
-      progressPaint,
+      fgPaint,
     );
   }
 
   @override
-  bool shouldRepaint(covariant _FocusClockPainter oldDelegate) =>
-      oldDelegate.progress != progress;
+  bool shouldRepaint(covariant _FocusClockPainter oldDelegate) {
+    return oldDelegate.progress != progress || oldDelegate.color != color;
+  }
 }
 
 class _FocusSummaryTile extends StatelessWidget {
@@ -203,32 +177,22 @@ class _FocusSummaryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isActive = session.endedAt == null;
-    final durationMinutes = sessionDisplayMinutes(session);
-    final label = session.notes?.isNotEmpty == true
-        ? session.notes!
-        : (isActive ? 'Active session' : 'Focus session');
-    final timestamp = DateFormat.MMMd().add_jm().format(session.startedAt);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: .4),
-      ),
+    final duration = sessionDisplayMinutes(session);
+    final startTime = DateFormat.jm().format(session.startedAt);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
         children: [
-          Icon(Icons.bolt_rounded, color: ChronosTheme.focusAccent),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              '$label • $timestamp',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+          Icon(
+            Icons.check_circle_outline_rounded,
+            size: 16,
+            color: Theme.of(context).extension<CustomColors>()!.focusAccent!,
           ),
-          Text('$durationMinutes mins', style: theme.textTheme.labelMedium),
+          const SizedBox(width: 8),
+          Text(sessionLabel(session), style: theme.textTheme.bodyMedium),
+          const Spacer(),
+          Text('$duration min • $startTime', style: theme.textTheme.labelSmall),
         ],
       ),
     );

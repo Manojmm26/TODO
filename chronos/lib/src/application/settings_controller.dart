@@ -4,9 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:launch_at_startup/launch_at_startup.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/theme/app_theme.dart';
+
 class AppSettings {
   const AppSettings({
     this.themeMode = ThemeMode.system,
+    this.themeVariant = AppThemeVariant.chronos,
     this.taskReminders = true,
     this.focusAlerts = true,
     this.digestEmails = false,
@@ -18,9 +21,11 @@ class AppSettings {
     this.ambientSounds = true,
     this.selectedSound = 'Rain',
     this.notificationChimes = true,
+    this.customThemeColorValue = 0xFF6750A4,
   });
 
   final ThemeMode themeMode;
+  final AppThemeVariant themeVariant;
   final bool taskReminders;
   final bool focusAlerts;
   final bool digestEmails;
@@ -32,9 +37,11 @@ class AppSettings {
   final bool ambientSounds;
   final String selectedSound;
   final bool notificationChimes;
+  final int customThemeColorValue;
 
   AppSettings copyWith({
     ThemeMode? themeMode,
+    AppThemeVariant? themeVariant,
     bool? taskReminders,
     bool? focusAlerts,
     bool? digestEmails,
@@ -46,9 +53,11 @@ class AppSettings {
     bool? ambientSounds,
     String? selectedSound,
     bool? notificationChimes,
+    int? customThemeColorValue,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
+      themeVariant: themeVariant ?? this.themeVariant,
       taskReminders: taskReminders ?? this.taskReminders,
       focusAlerts: focusAlerts ?? this.focusAlerts,
       digestEmails: digestEmails ?? this.digestEmails,
@@ -60,11 +69,14 @@ class AppSettings {
       ambientSounds: ambientSounds ?? this.ambientSounds,
       selectedSound: selectedSound ?? this.selectedSound,
       notificationChimes: notificationChimes ?? this.notificationChimes,
+      customThemeColorValue:
+          customThemeColorValue ?? this.customThemeColorValue,
     );
   }
 
   Map<String, dynamic> toJson() => {
     'themeMode': themeMode.index,
+    'themeVariant': themeVariant.index,
     'taskReminders': taskReminders,
     'focusAlerts': focusAlerts,
     'digestEmails': digestEmails,
@@ -76,10 +88,13 @@ class AppSettings {
     'ambientSounds': ambientSounds,
     'selectedSound': selectedSound,
     'notificationChimes': notificationChimes,
+    'customThemeColorValue': customThemeColorValue,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
     themeMode: ThemeMode.values[json['themeMode'] ?? ThemeMode.system.index],
+    themeVariant: AppThemeVariant
+        .values[json['themeVariant'] ?? AppThemeVariant.chronos.index],
     taskReminders: json['taskReminders'] ?? true,
     focusAlerts: json['focusAlerts'] ?? true,
     digestEmails: json['digestEmails'] ?? false,
@@ -91,11 +106,13 @@ class AppSettings {
     ambientSounds: json['ambientSounds'] ?? true,
     selectedSound: json['selectedSound'] ?? 'Rain',
     notificationChimes: json['notificationChimes'] ?? true,
+    customThemeColorValue: json['customThemeColorValue'] ?? 0xFF6750A4,
   );
 }
 
 class SettingsController extends StateNotifier<AppSettings> {
   static const String _themeModeKey = 'theme_mode';
+  static const String _themeVariantKey = 'theme_variant';
   static const String _taskRemindersKey = 'task_reminders';
   static const String _focusAlertsKey = 'focus_alerts';
   static const String _digestEmailsKey = 'digest_emails';
@@ -107,6 +124,7 @@ class SettingsController extends StateNotifier<AppSettings> {
   static const String _ambientSoundsKey = 'ambient_sounds';
   static const String _selectedSoundKey = 'selected_sound';
   static const String _notificationChimesKey = 'notification_chimes';
+  static const String _customThemeColorKey = 'custom_theme_color';
 
   SettingsController() : super(const AppSettings()) {
     _loadSettings();
@@ -115,8 +133,12 @@ class SettingsController extends StateNotifier<AppSettings> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final themeIndex = prefs.getInt(_themeModeKey) ?? ThemeMode.system.index;
+    final variantIndex =
+        prefs.getInt(_themeVariantKey) ?? AppThemeVariant.chronos.index;
+
     state = state.copyWith(
       themeMode: ThemeMode.values[themeIndex],
+      themeVariant: AppThemeVariant.values[variantIndex],
       taskReminders: prefs.getBool(_taskRemindersKey) ?? true,
       focusAlerts: prefs.getBool(_focusAlertsKey) ?? true,
       digestEmails: prefs.getBool(_digestEmailsKey) ?? false,
@@ -128,6 +150,7 @@ class SettingsController extends StateNotifier<AppSettings> {
       ambientSounds: prefs.getBool(_ambientSoundsKey) ?? true,
       selectedSound: prefs.getString(_selectedSoundKey) ?? 'Rain',
       notificationChimes: prefs.getBool(_notificationChimesKey) ?? true,
+      customThemeColorValue: prefs.getInt(_customThemeColorKey) ?? 0xFF6750A4,
     );
 
     if (!kIsWeb) {
@@ -146,6 +169,7 @@ class SettingsController extends StateNotifier<AppSettings> {
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_themeModeKey, state.themeMode.index);
+    await prefs.setInt(_themeVariantKey, state.themeVariant.index);
     await prefs.setBool(_taskRemindersKey, state.taskReminders);
     await prefs.setBool(_focusAlertsKey, state.focusAlerts);
     await prefs.setBool(_digestEmailsKey, state.digestEmails);
@@ -157,10 +181,21 @@ class SettingsController extends StateNotifier<AppSettings> {
     await prefs.setBool(_ambientSoundsKey, state.ambientSounds);
     await prefs.setString(_selectedSoundKey, state.selectedSound);
     await prefs.setBool(_notificationChimesKey, state.notificationChimes);
+    await prefs.setInt(_customThemeColorKey, state.customThemeColorValue);
   }
 
   void updateThemeMode(ThemeMode mode) {
     state = state.copyWith(themeMode: mode);
+    _saveSettings();
+  }
+
+  void updateThemeVariant(AppThemeVariant variant) {
+    state = state.copyWith(themeVariant: variant);
+    _saveSettings();
+  }
+
+  void updateCustomThemeColor(int colorValue) {
+    state = state.copyWith(customThemeColorValue: colorValue);
     _saveSettings();
   }
 

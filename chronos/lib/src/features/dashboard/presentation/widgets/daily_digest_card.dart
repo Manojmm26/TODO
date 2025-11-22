@@ -105,19 +105,29 @@ class _DigestMetric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: .35),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: .4),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: ChronosTheme.focusAccent),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: Theme.of(
+                  context,
+                ).extension<CustomColors>()!.focusAccent!,
+              ),
+              const Spacer(),
+              Text(
+                value,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
           Text(label, style: theme.textTheme.labelLarge),

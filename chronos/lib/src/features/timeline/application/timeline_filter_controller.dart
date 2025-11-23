@@ -7,17 +7,21 @@ class TimelineFilters {
   const TimelineFilters({
     this.buckets = const {...TimelineBucket.values},
     this.dateRange,
+    this.showCompleted = false,
   });
 
   final Set<TimelineBucket> buckets;
   final DateTimeRange? dateRange;
+  final bool showCompleted;
 
   TimelineFilters copyWith({
     Set<TimelineBucket>? buckets,
     DateTimeRange? dateRange,
+    bool? showCompleted,
   }) => TimelineFilters(
     buckets: buckets ?? this.buckets,
     dateRange: dateRange ?? this.dateRange,
+    showCompleted: showCompleted ?? this.showCompleted,
   );
 }
 
@@ -57,5 +61,9 @@ class TimelineFilterController extends StateNotifier<TimelineFilters> {
 
   void clearDateRange() {
     state = state.copyWith(dateRange: null);
+  }
+
+  void toggleShowCompleted() {
+    state = state.copyWith(showCompleted: !state.showCompleted);
   }
 }

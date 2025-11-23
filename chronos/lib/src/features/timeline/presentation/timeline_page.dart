@@ -22,7 +22,17 @@ class TimelinePage extends ConsumerWidget {
     return tasksAsync.when(
       data: (tasks) {
         // Filter by date range first
-        final filteredTasks = _filterTasksByDateRange(tasks, filters.dateRange);
+        var filteredTasks = _filterTasksByDateRange(tasks, filters.dateRange);
+        // Filter by completion status
+        if (!filters.showCompleted) {
+          filteredTasks = filteredTasks
+              .where((t) => t.status < taskStatusCompleted)
+              .toList();
+        }
+
+        // Sort by creation date (newest first)
+        filteredTasks.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
         final grouped = groupTasksByBucket(filteredTasks);
         final visibleBuckets = filters.buckets.isEmpty
             ? TimelineBucket.values
@@ -64,6 +74,22 @@ class TimelinePage extends ConsumerWidget {
               trailing: OverflowBar(
                 spacing: 8,
                 children: [
+                  FilterChip(
+                    label: const Text('Show completed'),
+                    selected: filters.showCompleted,
+                    onSelected: (_) => ref
+                        .read(timelineFilterProvider.notifier)
+                        .toggleShowCompleted(),
+                    avatar: Icon(
+                      filters.showCompleted
+                          ? Icons.check_circle_rounded
+                          : Icons.circle_outlined,
+                      size: 18,
+                      color: filters.showCompleted
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                  ),
                   TextButton(
                     onPressed: () => ref
                         .read(timelineFilterProvider.notifier)

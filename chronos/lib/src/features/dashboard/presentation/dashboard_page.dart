@@ -9,11 +9,20 @@ import 'package:intl/intl.dart';
 
 import '../../../application/providers.dart';
 
-class DashboardPage extends ConsumerWidget {
+import '../../../shared/constants.dart';
+
+class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends ConsumerState<DashboardPage> {
+  bool _showCompleted = false;
+
+  @override
+  Widget build(BuildContext context) {
     final tasksAsync = ref.watch(tasksStreamProvider);
     final goalsAsync = ref.watch(goalsStreamProvider);
     final sessionsAsync = ref.watch(focusSessionsStreamProvider);
@@ -22,16 +31,49 @@ class DashboardPage extends ConsumerWidget {
     final width = MediaQuery.of(context).size.width;
     final bool isWide = width > 1200;
 
+    // Filter tasks based on completion status
+    final filteredTasksAsync = tasksAsync.whenData((tasks) {
+      final sortedTasks = [...tasks]
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (_showCompleted) return sortedTasks;
+      return sortedTasks.where((t) => t.status < taskStatusCompleted).toList();
+    });
+
+    // Filter goals based on completion status
+    final filteredGoalsAsync = goalsAsync.whenData((goals) {
+      final sortedGoals = [...goals]
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (_showCompleted) return sortedGoals;
+      return sortedGoals.where((g) => !g.isCompleted).toList();
+    });
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Today • ${DateFormat.yMMMMEEEEd().format(DateTime.now())}',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Today • ${DateFormat.yMMMMEEEEd().format(DateTime.now())}',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              IconButton(
+                onPressed: () =>
+                    setState(() => _showCompleted = !_showCompleted),
+                icon: Icon(
+                  _showCompleted
+                      ? Icons.check_circle_rounded
+                      : Icons.circle_outlined,
+                ),
+                tooltip: _showCompleted
+                    ? 'Hide completed items'
+                    : 'Show completed items',
+              ),
+            ],
           ),
           const SizedBox(height: 24),
           Wrap(
@@ -45,14 +87,14 @@ class DashboardPage extends ConsumerWidget {
               SizedBox(
                 width: isWide ? width * .35 - 48 : width - 48,
                 child: GoalsProgress(
-                  goalsAsync: goalsAsync,
+                  goalsAsync: filteredGoalsAsync,
                   tasksAsync: tasksAsync,
                 ),
               ),
               SizedBox(
                 width: isWide ? width * .55 : width - 48,
                 child: TimelineOverview(
-                  tasksAsync: tasksAsync,
+                  tasksAsync: filteredTasksAsync,
                   subTasksAsync: subTasksAsync,
                 ),
               ),
@@ -64,7 +106,7 @@ class DashboardPage extends ConsumerWidget {
               SizedBox(
                 width: isWide ? width * .5 - 48 : width - 48,
                 child: DailyDigestCard(
-                  tasksAsync: tasksAsync,
+                  tasksAsync: filteredTasksAsync,
                   sessionsAsync: sessionsAsync,
                 ),
               ),

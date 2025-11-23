@@ -12,19 +12,27 @@ import '../../../shared/constants.dart';
 import '../../../shared/widgets/section_card.dart';
 import '../../dashboard/presentation/plan_task_dialog.dart';
 
-class GoalsPage extends ConsumerWidget {
+class GoalsPage extends ConsumerStatefulWidget {
   const GoalsPage({super.key});
+
+  @override
+  ConsumerState<GoalsPage> createState() => _GoalsPageState();
+}
+
+class _GoalsPageState extends ConsumerState<GoalsPage> {
+  bool _showCompleted = false;
 
   Future<void> _showNewGoalDialog(BuildContext context) {
     return showDialog(context: context, builder: (_) => const _NewGoalDialog());
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final goalsAsync = ref.watch(goalsStreamProvider);
     final tasksAsync = ref.watch(tasksStreamProvider);
     final cachedGoals = goalsAsync.maybeWhen(
-      data: (goals) => goals,
+      data: (goals) =>
+          [...goals]..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
       orElse: () => const <Goal>[],
     );
     final cachedTasks = tasksAsync.maybeWhen(
@@ -33,29 +41,55 @@ class GoalsPage extends ConsumerWidget {
     );
     final tasksByGoal = _tasksGroupedByGoal(cachedTasks);
     final goalLookup = {for (final goal in cachedGoals) goal.id: goal};
+
+    // Filter goals
+    final visibleGoals = _showCompleted
+        ? cachedGoals
+        : cachedGoals.where((g) => !g.isCompleted).toList();
+
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
         SectionCard(
           title: 'Active Goals',
           subtitle: 'Track milestones & completion',
-          trailing: FilledButton.icon(
-            onPressed: () => _showNewGoalDialog(context),
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('New Goal'),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                onPressed: () =>
+                    setState(() => _showCompleted = !_showCompleted),
+                icon: Icon(
+                  _showCompleted
+                      ? Icons.check_circle_rounded
+                      : Icons.circle_outlined,
+                ),
+                tooltip: _showCompleted
+                    ? 'Hide completed goals'
+                    : 'Show completed goals',
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: () => _showNewGoalDialog(context),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('New Goal'),
+              ),
+            ],
           ),
           child: goalsAsync.when(
             data: (goals) {
-              if (goals.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.all(24),
+              if (visibleGoals.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(24),
                   child: Text(
-                    'No goals yet — create one to start tracking progress.',
+                    _showCompleted
+                        ? 'No goals found.'
+                        : 'No active goals. Toggle "Show completed" to see finished goals, or create a new one.',
                   ),
                 );
               }
               return Column(
-                children: goals
+                children: visibleGoals
                     .map(
                       (goal) => _GoalProgressTile(
                         goal: goal,
@@ -81,11 +115,15 @@ class GoalsPage extends ConsumerWidget {
           subtitle: 'Highlight task checkpoints linked to goals',
           child: tasksAsync.when(
             data: (tasks) {
-              final milestoneTasks = tasks
-                  .where((task) => task.goalId != null)
-                  .take(4)
-                  .toList();
-              if (milestoneTasks.isEmpty) {
+              final milestoneTasks = [...tasks].where((task) {
+                if (task.goalId == null) return false;
+                if (!_showCompleted && isTaskCompleted(task)) return false;
+                return true;
+              }).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+              final visibleMilestones = milestoneTasks.take(4).toList();
+
+              if (visibleMilestones.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.all(16),
                   child: Text(
@@ -96,7 +134,7 @@ class GoalsPage extends ConsumerWidget {
               return Wrap(
                 spacing: 16,
                 runSpacing: 16,
-                children: milestoneTasks.map((task) {
+                children: visibleMilestones.map((task) {
                   final goal = task.goalId != null
                       ? goalLookup[task.goalId!]
                       : null;

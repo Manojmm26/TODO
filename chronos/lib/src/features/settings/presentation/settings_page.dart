@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:chronos/src/core/theme/app_theme.dart';
 
 import 'widgets/custom_color_picker.dart';
+import 'recurring_templates_page.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
@@ -11,7 +12,6 @@ import '../../../shared/widgets/section_card.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../application/providers.dart';
-
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -105,6 +105,22 @@ class SettingsPage extends ConsumerWidget {
                 ],
               );
             },
+          ),
+        ),
+        const SizedBox(height: 24),
+        SectionCard(
+          title: 'Recurring Tasks',
+          subtitle: 'Manage your recurring task templates',
+          child: ListTile(
+            leading: const Icon(Icons.repeat_rounded),
+            title: const Text('Manage Templates'),
+            subtitle: const Text('View, edit, or delete recurring patterns'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const RecurringTemplatesPage(),
+              ),
+            ),
           ),
         ),
       ],

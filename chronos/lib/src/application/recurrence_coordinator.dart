@@ -44,7 +44,10 @@ class RecurrenceCoordinator {
         return;
       }
 
-      await _createOccurrence(template, after: task.dueDate ?? DateTime.now());
+      // Use completion time (now) instead of task's due date to ensure
+      // the next occurrence respects the recurrence interval
+      // (e.g., daily = tomorrow, weekly = next week)
+      await _createOccurrence(template, after: DateTime.now());
     } catch (e, st) {
       debugPrint('🔴 Error handling task completion for ${task.id}: $e\n$st');
       rethrow;
@@ -113,7 +116,8 @@ class RecurrenceCoordinator {
         estimatedMinutes: Value(template.estimatedMinutes),
         actualMinutes: const Value(0),
         isRecurring: const Value(true),
-        recurrenceRule: Value(template.recurrenceRule),
+        isTemplate: const Value(false), // Occurrences are NOT templates
+        recurrenceRule: const Value(null), // Don't copy rule to children
         flagImmediate: Value(template.flagImmediate),
         flagToday: Value(template.flagToday),
         createdAt: Value(DateTime.now()),

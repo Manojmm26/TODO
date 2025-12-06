@@ -52,4 +52,41 @@ class TaskDao extends DatabaseAccessor<ChronosDatabase> with _$TaskDaoMixin {
               ),
             ]))
           .get();
+
+  /// Watch actionable tasks only (excludes templates)
+  Stream<List<Task>> watchActionableTasks() {
+    return (select(tasks)
+          ..where((tbl) => tbl.isTemplate.equals(false))
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+        .watch();
+  }
+
+  /// Watch recurring templates only
+  Stream<List<Task>> watchRecurringTemplates() {
+    return (select(tasks)
+          ..where((tbl) => tbl.isTemplate.equals(true))
+          ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+        .watch();
+  }
+
+  /// Delete oldest completed occurrences beyond limit for a template
+  Future<void> cleanupCompletedOccurrences(
+    String templateId, {
+    int keepCount = 50,
+  }) async {
+    final completed =
+        await (select(tasks)
+              ..where(
+                (t) =>
+                    t.parentRecurringId.equals(templateId) &
+                    t.status.isBiggerOrEqualValue(2),
+              )
+              ..orderBy([(t) => OrderingTerm.desc(t.updatedAt)]))
+            .get();
+
+    if (completed.length > keepCount) {
+      final toDelete = completed.skip(keepCount).map((t) => t.id).toList();
+      await (delete(tasks)..where((t) => t.id.isIn(toDelete))).go();
+    }
+  }
 }

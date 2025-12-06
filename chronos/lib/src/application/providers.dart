@@ -22,7 +22,15 @@ final projectsStreamProvider = StreamProvider.autoDispose<List<Project>>((ref) {
 
 final tasksStreamProvider = StreamProvider.autoDispose<List<Task>>((ref) {
   final repository = ref.watch(taskRepositoryProvider);
-  return repository.watchTasks();
+  return repository.watchActionableTasks(); // Excludes templates
+});
+
+/// Provider for recurring templates management UI
+final recurringTemplatesProvider = StreamProvider.autoDispose<List<Task>>((
+  ref,
+) {
+  final repository = ref.watch(taskRepositoryProvider);
+  return repository.watchRecurringTemplates();
 });
 
 final subTasksStreamProvider = StreamProvider.autoDispose<List<SubTask>>((ref) {

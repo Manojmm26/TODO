@@ -29,6 +29,14 @@ class TaskController {
     );
     await _tasks.update(task.id, companion);
     await _recurrence.onTaskCompleted(task);
+
+    // Cleanup old completed occurrences (keep last 50)
+    if (task.parentRecurringId != null) {
+      await _tasks.cleanupCompletedOccurrences(
+        task.parentRecurringId!,
+        keepCount: 50,
+      );
+    }
   }
 
   Future<void> reopenTask(Task task) async {

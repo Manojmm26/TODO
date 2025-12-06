@@ -43,6 +43,19 @@ class TaskRepository {
   Future<List<Task>> seriesForTemplate(String templateId) =>
       _dao.seriesForTemplate(templateId);
   Future<Task?> taskById(String id) => _dao.taskById(id);
+
+  /// Watch only actionable tasks (excludes recurring templates)
+  Stream<List<Task>> watchActionableTasks() => _dao.watchActionableTasks();
+
+  /// Watch recurring templates only
+  Stream<List<Task>> watchRecurringTemplates() =>
+      _dao.watchRecurringTemplates();
+
+  /// Cleanup old completed occurrences for a template
+  Future<void> cleanupCompletedOccurrences(
+    String templateId, {
+    int keepCount = 50,
+  }) => _dao.cleanupCompletedOccurrences(templateId, keepCount: keepCount);
 }
 
 class SubTaskRepository {

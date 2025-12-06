@@ -52,6 +52,7 @@ class QuickAddController {
       flagToday: Value(flagToday),
       priority: priority != null ? Value(priority) : const Value.absent(),
       isRecurring: Value(isRecurring),
+      isTemplate: Value(isRecurring), // Mark as template if recurring
       recurrenceRule: recurrenceRule != null
           ? Value(recurrenceRule)
           : const Value.absent(),

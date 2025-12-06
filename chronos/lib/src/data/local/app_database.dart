@@ -63,6 +63,7 @@ class Tasks extends Table {
   IntColumn get actualMinutes => integer().withDefault(const Constant(0))();
   BoolColumn get isRecurring => boolean().withDefault(const Constant(false))();
   TextColumn get recurrenceRule => text().nullable()();
+  BoolColumn get isTemplate => boolean().withDefault(const Constant(false))();
   BoolColumn get flagImmediate =>
       boolean().withDefault(const Constant(false))();
   BoolColumn get flagToday => boolean().withDefault(const Constant(false))();
@@ -153,13 +154,16 @@ class ChronosDatabase extends _$ChronosDatabase {
   ChronosDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, from, to) async {
       if (from < 2) {
         await m.addColumn(goals, goals.isCompleted);
+      }
+      if (from < 3) {
+        await m.addColumn(tasks, tasks.isTemplate);
       }
     },
   );

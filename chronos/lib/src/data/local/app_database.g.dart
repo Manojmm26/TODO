@@ -1264,6 +1264,21 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isTemplateMeta = const VerificationMeta(
+    'isTemplate',
+  );
+  @override
+  late final GeneratedColumn<bool> isTemplate = GeneratedColumn<bool>(
+    'is_template',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_template" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _flagImmediateMeta = const VerificationMeta(
     'flagImmediate',
   );
@@ -1335,6 +1350,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     actualMinutes,
     isRecurring,
     recurrenceRule,
+    isTemplate,
     flagImmediate,
     flagToday,
     createdAt,
@@ -1461,6 +1477,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         ),
       );
     }
+    if (data.containsKey('is_template')) {
+      context.handle(
+        _isTemplateMeta,
+        isTemplate.isAcceptableOrUnknown(data['is_template']!, _isTemplateMeta),
+      );
+    }
     if (data.containsKey('flag_immediate')) {
       context.handle(
         _flagImmediateMeta,
@@ -1557,6 +1579,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.string,
         data['${effectivePrefix}recurrence_rule'],
       ),
+      isTemplate: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_template'],
+      )!,
       flagImmediate: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}flag_immediate'],
@@ -1598,6 +1624,7 @@ class Task extends DataClass implements Insertable<Task> {
   final int actualMinutes;
   final bool isRecurring;
   final String? recurrenceRule;
+  final bool isTemplate;
   final bool flagImmediate;
   final bool flagToday;
   final DateTime createdAt;
@@ -1618,6 +1645,7 @@ class Task extends DataClass implements Insertable<Task> {
     required this.actualMinutes,
     required this.isRecurring,
     this.recurrenceRule,
+    required this.isTemplate,
     required this.flagImmediate,
     required this.flagToday,
     required this.createdAt,
@@ -1657,6 +1685,7 @@ class Task extends DataClass implements Insertable<Task> {
     if (!nullToAbsent || recurrenceRule != null) {
       map['recurrence_rule'] = Variable<String>(recurrenceRule);
     }
+    map['is_template'] = Variable<bool>(isTemplate);
     map['flag_immediate'] = Variable<bool>(flagImmediate);
     map['flag_today'] = Variable<bool>(flagToday);
     map['created_at'] = Variable<DateTime>(createdAt);
@@ -1697,6 +1726,7 @@ class Task extends DataClass implements Insertable<Task> {
       recurrenceRule: recurrenceRule == null && nullToAbsent
           ? const Value.absent()
           : Value(recurrenceRule),
+      isTemplate: Value(isTemplate),
       flagImmediate: Value(flagImmediate),
       flagToday: Value(flagToday),
       createdAt: Value(createdAt),
@@ -1727,6 +1757,7 @@ class Task extends DataClass implements Insertable<Task> {
       actualMinutes: serializer.fromJson<int>(json['actualMinutes']),
       isRecurring: serializer.fromJson<bool>(json['isRecurring']),
       recurrenceRule: serializer.fromJson<String?>(json['recurrenceRule']),
+      isTemplate: serializer.fromJson<bool>(json['isTemplate']),
       flagImmediate: serializer.fromJson<bool>(json['flagImmediate']),
       flagToday: serializer.fromJson<bool>(json['flagToday']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -1752,6 +1783,7 @@ class Task extends DataClass implements Insertable<Task> {
       'actualMinutes': serializer.toJson<int>(actualMinutes),
       'isRecurring': serializer.toJson<bool>(isRecurring),
       'recurrenceRule': serializer.toJson<String?>(recurrenceRule),
+      'isTemplate': serializer.toJson<bool>(isTemplate),
       'flagImmediate': serializer.toJson<bool>(flagImmediate),
       'flagToday': serializer.toJson<bool>(flagToday),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1775,6 +1807,7 @@ class Task extends DataClass implements Insertable<Task> {
     int? actualMinutes,
     bool? isRecurring,
     Value<String?> recurrenceRule = const Value.absent(),
+    bool? isTemplate,
     bool? flagImmediate,
     bool? flagToday,
     DateTime? createdAt,
@@ -1799,6 +1832,7 @@ class Task extends DataClass implements Insertable<Task> {
     recurrenceRule: recurrenceRule.present
         ? recurrenceRule.value
         : this.recurrenceRule,
+    isTemplate: isTemplate ?? this.isTemplate,
     flagImmediate: flagImmediate ?? this.flagImmediate,
     flagToday: flagToday ?? this.flagToday,
     createdAt: createdAt ?? this.createdAt,
@@ -1835,6 +1869,9 @@ class Task extends DataClass implements Insertable<Task> {
       recurrenceRule: data.recurrenceRule.present
           ? data.recurrenceRule.value
           : this.recurrenceRule,
+      isTemplate: data.isTemplate.present
+          ? data.isTemplate.value
+          : this.isTemplate,
       flagImmediate: data.flagImmediate.present
           ? data.flagImmediate.value
           : this.flagImmediate,
@@ -1862,6 +1899,7 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('actualMinutes: $actualMinutes, ')
           ..write('isRecurring: $isRecurring, ')
           ..write('recurrenceRule: $recurrenceRule, ')
+          ..write('isTemplate: $isTemplate, ')
           ..write('flagImmediate: $flagImmediate, ')
           ..write('flagToday: $flagToday, ')
           ..write('createdAt: $createdAt, ')
@@ -1887,6 +1925,7 @@ class Task extends DataClass implements Insertable<Task> {
     actualMinutes,
     isRecurring,
     recurrenceRule,
+    isTemplate,
     flagImmediate,
     flagToday,
     createdAt,
@@ -1911,6 +1950,7 @@ class Task extends DataClass implements Insertable<Task> {
           other.actualMinutes == this.actualMinutes &&
           other.isRecurring == this.isRecurring &&
           other.recurrenceRule == this.recurrenceRule &&
+          other.isTemplate == this.isTemplate &&
           other.flagImmediate == this.flagImmediate &&
           other.flagToday == this.flagToday &&
           other.createdAt == this.createdAt &&
@@ -1933,6 +1973,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<int> actualMinutes;
   final Value<bool> isRecurring;
   final Value<String?> recurrenceRule;
+  final Value<bool> isTemplate;
   final Value<bool> flagImmediate;
   final Value<bool> flagToday;
   final Value<DateTime> createdAt;
@@ -1954,6 +1995,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.actualMinutes = const Value.absent(),
     this.isRecurring = const Value.absent(),
     this.recurrenceRule = const Value.absent(),
+    this.isTemplate = const Value.absent(),
     this.flagImmediate = const Value.absent(),
     this.flagToday = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1976,6 +2018,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.actualMinutes = const Value.absent(),
     this.isRecurring = const Value.absent(),
     this.recurrenceRule = const Value.absent(),
+    this.isTemplate = const Value.absent(),
     this.flagImmediate = const Value.absent(),
     this.flagToday = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1999,6 +2042,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<int>? actualMinutes,
     Expression<bool>? isRecurring,
     Expression<String>? recurrenceRule,
+    Expression<bool>? isTemplate,
     Expression<bool>? flagImmediate,
     Expression<bool>? flagToday,
     Expression<DateTime>? createdAt,
@@ -2021,6 +2065,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (actualMinutes != null) 'actual_minutes': actualMinutes,
       if (isRecurring != null) 'is_recurring': isRecurring,
       if (recurrenceRule != null) 'recurrence_rule': recurrenceRule,
+      if (isTemplate != null) 'is_template': isTemplate,
       if (flagImmediate != null) 'flag_immediate': flagImmediate,
       if (flagToday != null) 'flag_today': flagToday,
       if (createdAt != null) 'created_at': createdAt,
@@ -2045,6 +2090,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<int>? actualMinutes,
     Value<bool>? isRecurring,
     Value<String?>? recurrenceRule,
+    Value<bool>? isTemplate,
     Value<bool>? flagImmediate,
     Value<bool>? flagToday,
     Value<DateTime>? createdAt,
@@ -2067,6 +2113,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       actualMinutes: actualMinutes ?? this.actualMinutes,
       isRecurring: isRecurring ?? this.isRecurring,
       recurrenceRule: recurrenceRule ?? this.recurrenceRule,
+      isTemplate: isTemplate ?? this.isTemplate,
       flagImmediate: flagImmediate ?? this.flagImmediate,
       flagToday: flagToday ?? this.flagToday,
       createdAt: createdAt ?? this.createdAt,
@@ -2123,6 +2170,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (recurrenceRule.present) {
       map['recurrence_rule'] = Variable<String>(recurrenceRule.value);
     }
+    if (isTemplate.present) {
+      map['is_template'] = Variable<bool>(isTemplate.value);
+    }
     if (flagImmediate.present) {
       map['flag_immediate'] = Variable<bool>(flagImmediate.value);
     }
@@ -2159,6 +2209,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('actualMinutes: $actualMinutes, ')
           ..write('isRecurring: $isRecurring, ')
           ..write('recurrenceRule: $recurrenceRule, ')
+          ..write('isTemplate: $isTemplate, ')
           ..write('flagImmediate: $flagImmediate, ')
           ..write('flagToday: $flagToday, ')
           ..write('createdAt: $createdAt, ')
@@ -5188,6 +5239,7 @@ typedef $$TasksTableCreateCompanionBuilder =
       Value<int> actualMinutes,
       Value<bool> isRecurring,
       Value<String?> recurrenceRule,
+      Value<bool> isTemplate,
       Value<bool> flagImmediate,
       Value<bool> flagToday,
       Value<DateTime> createdAt,
@@ -5211,6 +5263,7 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<int> actualMinutes,
       Value<bool> isRecurring,
       Value<String?> recurrenceRule,
+      Value<bool> isTemplate,
       Value<bool> flagImmediate,
       Value<bool> flagToday,
       Value<DateTime> createdAt,
@@ -5399,6 +5452,11 @@ class $$TasksTableFilterComposer
 
   ColumnFilters<String> get recurrenceRule => $composableBuilder(
     column: $table.recurrenceRule,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isTemplate => $composableBuilder(
+    column: $table.isTemplate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5636,6 +5694,11 @@ class $$TasksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isTemplate => $composableBuilder(
+    column: $table.isTemplate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get flagImmediate => $composableBuilder(
     column: $table.flagImmediate,
     builder: (column) => ColumnOrderings(column),
@@ -5780,6 +5843,11 @@ class $$TasksTableAnnotationComposer
 
   GeneratedColumn<String> get recurrenceRule => $composableBuilder(
     column: $table.recurrenceRule,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isTemplate => $composableBuilder(
+    column: $table.isTemplate,
     builder: (column) => column,
   );
 
@@ -5992,6 +6060,7 @@ class $$TasksTableTableManager
                 Value<int> actualMinutes = const Value.absent(),
                 Value<bool> isRecurring = const Value.absent(),
                 Value<String?> recurrenceRule = const Value.absent(),
+                Value<bool> isTemplate = const Value.absent(),
                 Value<bool> flagImmediate = const Value.absent(),
                 Value<bool> flagToday = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -6013,6 +6082,7 @@ class $$TasksTableTableManager
                 actualMinutes: actualMinutes,
                 isRecurring: isRecurring,
                 recurrenceRule: recurrenceRule,
+                isTemplate: isTemplate,
                 flagImmediate: flagImmediate,
                 flagToday: flagToday,
                 createdAt: createdAt,
@@ -6036,6 +6106,7 @@ class $$TasksTableTableManager
                 Value<int> actualMinutes = const Value.absent(),
                 Value<bool> isRecurring = const Value.absent(),
                 Value<String?> recurrenceRule = const Value.absent(),
+                Value<bool> isTemplate = const Value.absent(),
                 Value<bool> flagImmediate = const Value.absent(),
                 Value<bool> flagToday = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -6057,6 +6128,7 @@ class $$TasksTableTableManager
                 actualMinutes: actualMinutes,
                 isRecurring: isRecurring,
                 recurrenceRule: recurrenceRule,
+                isTemplate: isTemplate,
                 flagImmediate: flagImmediate,
                 flagToday: flagToday,
                 createdAt: createdAt,

@@ -24,7 +24,7 @@ class RecurrenceCoordinator {
       final templates = await _tasks.recurringTemplates();
       for (final template in templates) {
         try {
-          await _ensureUpcomingOccurrence(template);
+          await ensureUpcomingOccurrence(template);
         } catch (e, st) {
           debugPrint('Error ensuring occurrence for ${template.id}: $e\n$st');
         }
@@ -54,22 +54,77 @@ class RecurrenceCoordinator {
     }
   }
 
-  Future<void> _ensureUpcomingOccurrence(Task template) async {
+  Future<void> ensureUpcomingOccurrence(Task template) async {
+    debugPrint('Checking recurrence for ${template.title} (${template.id})');
     if (template.recurrenceRule == null || template.recurrenceRule!.isEmpty) {
+      debugPrint('No recurrence rule for ${template.title}');
       return;
     }
     final series = await _tasks.seriesForTemplate(template.id);
-    final hasOpenChild = series.any(
-      (task) => task.parentRecurringId != null && task.status < 2,
+    debugPrint('Found ${series.length} existing items in series');
+
+    // Check for open tasks that are expired (due before today)
+    // and remove them per user request ("if i don't complete it should be removed")
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    bool didExpire = false;
+
+    // Use a secondary list to avoid concurrent modification if we were iterating and deleting
+    // but here we just iterate first.
+    final openTasks = series
+        .where((t) => t.parentRecurringId != null && t.status < 2)
+        .toList();
+
+    for (final task in openTasks) {
+      if (task.dueDate != null && task.dueDate!.isBefore(todayStart)) {
+        await _tasks.delete(task.id);
+        didExpire = true;
+      } else {
+        // We have a valid future/today task, so we don't need to generate a new one.
+        debugPrint(
+          'Valid future task exists: ${task.title} due ${task.dueDate}',
+        );
+        return;
+      }
+    }
+
+    DateTime pivotDate;
+    bool includeAfter = false;
+
+    if (didExpire) {
+      // If we expired old tasks, we want to catch up to "Today".
+      // Using yesterday allows 'next' to be 'Today' (if daily) or next valid occurrence.
+      pivotDate = now.subtract(const Duration(days: 1));
+      includeAfter = false;
+    } else {
+      final latestDue = _latestDueDate(series);
+      if (latestDue == null) {
+        // Brand new template: We want the first instance immediately.
+        // Even if start date is today.
+        debugPrint('Brand new template detected. Forcing immediate creation.');
+        pivotDate = template.startDate ?? template.dueDate ?? now;
+        includeAfter = true;
+      } else {
+        // Standard continuation
+        pivotDate = latestDue;
+        includeAfter = false;
+      }
+    }
+
+    await _createOccurrence(
+      template,
+      after: pivotDate,
+      includeAfter: includeAfter,
     );
-    if (hasOpenChild) return;
-    final latestDue =
-        _latestDueDate(series) ?? template.dueDate ?? DateTime.now();
-    await _createOccurrence(template, after: latestDue);
   }
 
-  Future<void> _createOccurrence(Task template, {DateTime? after}) async {
+  Future<void> _createOccurrence(
+    Task template, {
+    DateTime? after,
+    bool includeAfter = false,
+  }) async {
     try {
+      debugPrint('_createOccurrence: after=$after, includeAfter=$includeAfter');
       final ruleString = template.recurrenceRule;
       if (ruleString == null || ruleString.isEmpty) return;
 
@@ -81,20 +136,59 @@ class RecurrenceCoordinator {
       final rule = RecurrenceRule.fromString(normalizedRule);
       final templateStart =
           (template.startDate ?? template.dueDate ?? DateTime.now()).toUtc();
+
+      // If after is null, use now.
       final pivot = (after ?? DateTime.now()).toUtc();
+
+      debugPrint('RRULE calc: start=$templateStart, pivot=$pivot');
+
+      // If pivot is before start, snap to start?
+      // rrule handles 'after' correctly relative to 'start'.
+      // But if we want to force inclusion of start, we must be careful.
+      // If includeAfter is true, we simply pass it to getInstances.
+
       final normalizedAfter = pivot.isBefore(templateStart)
-          ? templateStart
+          ? (includeAfter
+                ? templateStart
+                : templateStart.subtract(const Duration(seconds: 1)))
           : pivot;
+
       final iterator = rule
           .getInstances(
             start: templateStart,
             after: normalizedAfter,
-            includeAfter: false,
+            includeAfter: includeAfter,
           )
           .iterator;
-      if (!iterator.moveNext()) return;
+      if (!iterator.moveNext()) {
+        debugPrint('No next occurrence found by RRULE');
+        return;
+      }
       final nextUtc = iterator.current;
       final nextDue = nextUtc.toLocal();
+
+      // Check for duplicates before interacting with DB!
+      // Exclude values that are the template itself!
+      final series = await _tasks.seriesForTemplate(template.id);
+      final isDuplicate = series.any((t) {
+        if (t.id == template.id)
+          return false; // Don't check the template against itself
+        // Simple check: Same Due Date to the minute?
+        // Let's use isAtSameMomentAs or checking difference < 1 min
+        if (t.dueDate == null) return false;
+        return t.dueDate!.isAtSameMomentAs(nextDue) ||
+            (t.dueDate!.difference(nextDue).abs() < const Duration(minutes: 1));
+      });
+
+      if (isDuplicate) {
+        debugPrint(
+          'Skipping duplicate occurrence for template ${template.id} at $nextDue',
+        );
+        return;
+      }
+
+      debugPrint('Creating occurrence for $nextDue');
+
       final duration = (template.dueDate != null && template.startDate != null)
           ? template.dueDate!.difference(template.startDate!)
           : Duration.zero;
@@ -117,7 +211,7 @@ class RecurrenceCoordinator {
         actualMinutes: const Value(0),
         isRecurring: const Value(true),
         isTemplate: const Value(false), // Occurrences are NOT templates
-        recurrenceRule: const Value(null), // Don't copy rule to children
+        recurrenceRule: Value(template.recurrenceRule),
         flagImmediate: Value(template.flagImmediate),
         flagToday: Value(template.flagToday),
         createdAt: Value(DateTime.now()),

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../application/quick_add_controller.dart';
+import '../../../application/recurrence_coordinator.dart';
+import '../../../data/repositories/chronos_repositories.dart';
 import '../../../shared/recurrence/recurrence_utils.dart';
 import '../data/dashboard_models.dart';
 
@@ -268,7 +270,7 @@ class _PlanTaskDialogState extends ConsumerState<PlanTaskDialog> {
         ? null
         : _descriptionController.text.trim();
     try {
-      await quickAdd.addTask(
+      final taskId = await quickAdd.addTask(
         title: title,
         description: description,
         goalId: _goalIdController.text.trim().isEmpty
@@ -282,6 +284,29 @@ class _PlanTaskDialogState extends ConsumerState<PlanTaskDialog> {
         isRecurring: isRecurring,
         recurrenceRule: recurrenceRule,
       );
+
+      if (isRecurring) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Processing recurring task...'),
+              duration: Duration(milliseconds: 500),
+            ),
+          );
+        }
+
+        // Immediately ensure the first occurrence is created
+        final tasks = ref.read(taskRepositoryProvider);
+        final coordinator = ref.read(recurrenceCoordinatorProvider);
+
+        // Small delay to ensure DB consistency?
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        final template = await tasks.taskById(taskId);
+        if (template != null) {
+          await coordinator.ensureUpcomingOccurrence(template);
+        }
+      }
       if (context.mounted) Navigator.of(context).pop();
     } catch (error) {
       if (context.mounted) {

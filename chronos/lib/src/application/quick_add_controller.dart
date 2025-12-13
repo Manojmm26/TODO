@@ -27,7 +27,7 @@ class QuickAddController {
   final GoalRepository _goals;
   final SubTaskRepository _subTasks;
 
-  Future<void> addTask({
+  Future<String> addTask({
     required String title,
     String? description,
     String? goalId,
@@ -39,9 +39,10 @@ class QuickAddController {
     int? priority,
     bool isRecurring = false,
     String? recurrenceRule,
-  }) {
+  }) async {
+    final id = _uuid.v4();
     final companion = TasksCompanion(
-      id: Value(_uuid.v4()),
+      id: Value(id),
       title: Value(title),
       description: Value(description),
       goalId: Value(goalId),
@@ -59,7 +60,8 @@ class QuickAddController {
       createdAt: Value(DateTime.now()),
       updatedAt: Value(DateTime.now()),
     );
-    return _tasks.upsert(companion);
+    await _tasks.upsert(companion);
+    return id;
   }
 
   Future<void> addGoal({

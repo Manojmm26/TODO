@@ -27,6 +27,8 @@ class Goals extends Table {
   IntColumn get colorHex => integer().withDefault(const Constant(0xFF7C4DFF))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+  IntColumn get totalSeconds => integer().withDefault(const Constant(0))();
+  DateTimeColumn get timerStartedAt => dateTime().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -154,7 +156,7 @@ class ChronosDatabase extends _$ChronosDatabase {
   ChronosDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -164,6 +166,10 @@ class ChronosDatabase extends _$ChronosDatabase {
       }
       if (from < 3) {
         await m.addColumn(tasks, tasks.isTemplate);
+      }
+      if (from < 4) {
+        await m.addColumn(goals, goals.totalSeconds);
+        await m.addColumn(goals, goals.timerStartedAt);
       }
     },
   );

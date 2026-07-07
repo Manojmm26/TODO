@@ -110,6 +110,30 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     requiredDuringInsert: false,
     defaultValue: currentDateAndTime,
   );
+  static const VerificationMeta _totalSecondsMeta = const VerificationMeta(
+    'totalSeconds',
+  );
+  @override
+  late final GeneratedColumn<int> totalSeconds = GeneratedColumn<int>(
+    'total_seconds',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _timerStartedAtMeta = const VerificationMeta(
+    'timerStartedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> timerStartedAt =
+      GeneratedColumn<DateTime>(
+        'timer_started_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -121,6 +145,8 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     colorHex,
     createdAt,
     updatedAt,
+    totalSeconds,
+    timerStartedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -198,6 +224,24 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
         updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
     }
+    if (data.containsKey('total_seconds')) {
+      context.handle(
+        _totalSecondsMeta,
+        totalSeconds.isAcceptableOrUnknown(
+          data['total_seconds']!,
+          _totalSecondsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('timer_started_at')) {
+      context.handle(
+        _timerStartedAtMeta,
+        timerStartedAt.isAcceptableOrUnknown(
+          data['timer_started_at']!,
+          _timerStartedAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -243,6 +287,14 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      totalSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_seconds'],
+      )!,
+      timerStartedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}timer_started_at'],
+      ),
     );
   }
 
@@ -262,6 +314,8 @@ class Goal extends DataClass implements Insertable<Goal> {
   final int colorHex;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int totalSeconds;
+  final DateTime? timerStartedAt;
   const Goal({
     required this.id,
     required this.title,
@@ -272,6 +326,8 @@ class Goal extends DataClass implements Insertable<Goal> {
     required this.colorHex,
     required this.createdAt,
     required this.updatedAt,
+    required this.totalSeconds,
+    this.timerStartedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -291,6 +347,10 @@ class Goal extends DataClass implements Insertable<Goal> {
     map['color_hex'] = Variable<int>(colorHex);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['total_seconds'] = Variable<int>(totalSeconds);
+    if (!nullToAbsent || timerStartedAt != null) {
+      map['timer_started_at'] = Variable<DateTime>(timerStartedAt);
+    }
     return map;
   }
 
@@ -311,6 +371,10 @@ class Goal extends DataClass implements Insertable<Goal> {
       colorHex: Value(colorHex),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      totalSeconds: Value(totalSeconds),
+      timerStartedAt: timerStartedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(timerStartedAt),
     );
   }
 
@@ -329,6 +393,8 @@ class Goal extends DataClass implements Insertable<Goal> {
       colorHex: serializer.fromJson<int>(json['colorHex']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      totalSeconds: serializer.fromJson<int>(json['totalSeconds']),
+      timerStartedAt: serializer.fromJson<DateTime?>(json['timerStartedAt']),
     );
   }
   @override
@@ -344,6 +410,8 @@ class Goal extends DataClass implements Insertable<Goal> {
       'colorHex': serializer.toJson<int>(colorHex),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'totalSeconds': serializer.toJson<int>(totalSeconds),
+      'timerStartedAt': serializer.toJson<DateTime?>(timerStartedAt),
     };
   }
 
@@ -357,6 +425,8 @@ class Goal extends DataClass implements Insertable<Goal> {
     int? colorHex,
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? totalSeconds,
+    Value<DateTime?> timerStartedAt = const Value.absent(),
   }) => Goal(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -369,6 +439,10 @@ class Goal extends DataClass implements Insertable<Goal> {
     colorHex: colorHex ?? this.colorHex,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    totalSeconds: totalSeconds ?? this.totalSeconds,
+    timerStartedAt: timerStartedAt.present
+        ? timerStartedAt.value
+        : this.timerStartedAt,
   );
   Goal copyWithCompanion(GoalsCompanion data) {
     return Goal(
@@ -389,6 +463,12 @@ class Goal extends DataClass implements Insertable<Goal> {
       colorHex: data.colorHex.present ? data.colorHex.value : this.colorHex,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      totalSeconds: data.totalSeconds.present
+          ? data.totalSeconds.value
+          : this.totalSeconds,
+      timerStartedAt: data.timerStartedAt.present
+          ? data.timerStartedAt.value
+          : this.timerStartedAt,
     );
   }
 
@@ -403,7 +483,9 @@ class Goal extends DataClass implements Insertable<Goal> {
           ..write('isCompleted: $isCompleted, ')
           ..write('colorHex: $colorHex, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('totalSeconds: $totalSeconds, ')
+          ..write('timerStartedAt: $timerStartedAt')
           ..write(')'))
         .toString();
   }
@@ -419,6 +501,8 @@ class Goal extends DataClass implements Insertable<Goal> {
     colorHex,
     createdAt,
     updatedAt,
+    totalSeconds,
+    timerStartedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -432,7 +516,9 @@ class Goal extends DataClass implements Insertable<Goal> {
           other.isCompleted == this.isCompleted &&
           other.colorHex == this.colorHex &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.totalSeconds == this.totalSeconds &&
+          other.timerStartedAt == this.timerStartedAt);
 }
 
 class GoalsCompanion extends UpdateCompanion<Goal> {
@@ -445,6 +531,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   final Value<int> colorHex;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<int> totalSeconds;
+  final Value<DateTime?> timerStartedAt;
   final Value<int> rowid;
   const GoalsCompanion({
     this.id = const Value.absent(),
@@ -456,6 +544,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     this.colorHex = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.totalSeconds = const Value.absent(),
+    this.timerStartedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   GoalsCompanion.insert({
@@ -468,6 +558,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     this.colorHex = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.totalSeconds = const Value.absent(),
+    this.timerStartedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        title = Value(title);
@@ -481,6 +573,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     Expression<int>? colorHex,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<int>? totalSeconds,
+    Expression<DateTime>? timerStartedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -493,6 +587,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       if (colorHex != null) 'color_hex': colorHex,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (totalSeconds != null) 'total_seconds': totalSeconds,
+      if (timerStartedAt != null) 'timer_started_at': timerStartedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -507,6 +603,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     Value<int>? colorHex,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<int>? totalSeconds,
+    Value<DateTime?>? timerStartedAt,
     Value<int>? rowid,
   }) {
     return GoalsCompanion(
@@ -519,6 +617,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       colorHex: colorHex ?? this.colorHex,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      totalSeconds: totalSeconds ?? this.totalSeconds,
+      timerStartedAt: timerStartedAt ?? this.timerStartedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -553,6 +653,12 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (totalSeconds.present) {
+      map['total_seconds'] = Variable<int>(totalSeconds.value);
+    }
+    if (timerStartedAt.present) {
+      map['timer_started_at'] = Variable<DateTime>(timerStartedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -571,6 +677,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
           ..write('colorHex: $colorHex, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
+          ..write('totalSeconds: $totalSeconds, ')
+          ..write('timerStartedAt: $timerStartedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4200,6 +4308,8 @@ typedef $$GoalsTableCreateCompanionBuilder =
       Value<int> colorHex,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<int> totalSeconds,
+      Value<DateTime?> timerStartedAt,
       Value<int> rowid,
     });
 typedef $$GoalsTableUpdateCompanionBuilder =
@@ -4213,6 +4323,8 @@ typedef $$GoalsTableUpdateCompanionBuilder =
       Value<int> colorHex,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<int> totalSeconds,
+      Value<DateTime?> timerStartedAt,
       Value<int> rowid,
     });
 
@@ -4310,6 +4422,16 @@ class $$GoalsTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
     column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get totalSeconds => $composableBuilder(
+    column: $table.totalSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get timerStartedAt => $composableBuilder(
+    column: $table.timerStartedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4417,6 +4539,16 @@ class $$GoalsTableOrderingComposer
     column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get totalSeconds => $composableBuilder(
+    column: $table.totalSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get timerStartedAt => $composableBuilder(
+    column: $table.timerStartedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$GoalsTableAnnotationComposer
@@ -4462,6 +4594,16 @@ class $$GoalsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get totalSeconds => $composableBuilder(
+    column: $table.totalSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get timerStartedAt => $composableBuilder(
+    column: $table.timerStartedAt,
+    builder: (column) => column,
+  );
 
   Expression<T> projectsRefs<T extends Object>(
     Expression<T> Function($$ProjectsTableAnnotationComposer a) f,
@@ -4551,6 +4693,8 @@ class $$GoalsTableTableManager
                 Value<int> colorHex = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> totalSeconds = const Value.absent(),
+                Value<DateTime?> timerStartedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => GoalsCompanion(
                 id: id,
@@ -4562,6 +4706,8 @@ class $$GoalsTableTableManager
                 colorHex: colorHex,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                totalSeconds: totalSeconds,
+                timerStartedAt: timerStartedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4575,6 +4721,8 @@ class $$GoalsTableTableManager
                 Value<int> colorHex = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> totalSeconds = const Value.absent(),
+                Value<DateTime?> timerStartedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => GoalsCompanion.insert(
                 id: id,
@@ -4586,6 +4734,8 @@ class $$GoalsTableTableManager
                 colorHex: colorHex,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                totalSeconds: totalSeconds,
+                timerStartedAt: timerStartedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

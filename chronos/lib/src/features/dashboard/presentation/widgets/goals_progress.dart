@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../data/local/app_database.dart';
+import '../../../../shared/widgets/goal_timer.dart';
 
 class GoalsProgress extends StatelessWidget {
   const GoalsProgress({
@@ -60,12 +61,23 @@ class GoalsProgress extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                goal.title,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      goal.title,
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    GoalTimer(goal: goal, compact: true),
+                                  ],
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               Text(
                                 '${(progress * 100).toInt()}%',
                                 style: theme.textTheme.labelSmall,

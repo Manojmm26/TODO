@@ -111,6 +111,33 @@ class QuickAddController {
     return _tasks.update(taskId, companion);
   }
 
+  Future<void> stopGoalTimer(String goalId) async {
+    final allGoals = await _goals.fetchGoals();
+    final goal = allGoals.firstWhere((g) => g.id == goalId);
+
+    if (goal.timerStartedAt == null) return;
+
+    final now = DateTime.now();
+    final sessionDuration = now.difference(goal.timerStartedAt!).inSeconds;
+
+    final companion = GoalsCompanion(
+      id: Value(goalId),
+      totalSeconds: Value(goal.totalSeconds + sessionDuration),
+      timerStartedAt: const Value(null),
+      updatedAt: Value(now),
+    );
+    await _goals.update(companion);
+  }
+
+  Future<void> startGoalTimer(String goalId) {
+    final companion = GoalsCompanion(
+      id: Value(goalId),
+      timerStartedAt: Value(DateTime.now()),
+      updatedAt: Value(DateTime.now()),
+    );
+    return _goals.update(companion);
+  }
+
   Future<void> toggleGoalCompletion(String goalId, bool isCompleted) {
     final companion = GoalsCompanion(
       isCompleted: Value(isCompleted),

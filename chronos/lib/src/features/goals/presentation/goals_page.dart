@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:chronos/src/features/dashboard/presentation/dashboard_metrics.dart';
 import 'package:chronos/src/shared/widgets/task_tile.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +13,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/local/app_database.dart';
 import '../../../shared/constants.dart';
 import '../../../shared/widgets/section_card.dart';
+import '../../../shared/widgets/goal_timer.dart';
 import '../../dashboard/presentation/plan_task_dialog.dart';
 
 class GoalsPage extends ConsumerStatefulWidget {
@@ -236,6 +240,8 @@ class _GoalProgressTile extends ConsumerWidget {
                             : null,
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    GoalTimer(goal: goal, compact: true),
                   ],
                 ),
               ),
@@ -262,7 +268,7 @@ class _GoalProgressTile extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: LinearProgressIndicator(
@@ -294,30 +300,30 @@ class _GoalProgressTile extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: () => showDialog<void>(
-              context: context,
-              builder: (_) => PlanTaskDialog(initialGoalId: goal.id),
-            ),
-            icon: const Icon(Icons.add_task_rounded),
-            label: Text(
-              linkedTasks.isEmpty
-                  ? 'Add first milestone task'
-                  : 'Add milestone task',
-            ),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () => showDialog<void>(
-              context: context,
-              builder: (_) => _LinkExistingTaskDialog(goalId: goal.id),
-            ),
-            icon: const Icon(Icons.link_rounded),
-            label: Text(
-              linkedTasks.isEmpty
-                  ? 'Link first existing task'
-                  : 'Link existing task',
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => PlanTaskDialog(initialGoalId: goal.id),
+                  ),
+                  icon: const Icon(Icons.add_task_rounded),
+                  label: const Text('Add Task'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => _LinkExistingTaskDialog(goalId: goal.id),
+                  ),
+                  icon: const Icon(Icons.link_rounded),
+                  label: const Text('Link Task'),
+                ),
+              ),
+            ],
           ),
           if (linkedTasks.isNotEmpty) ...[
             const SizedBox(height: 16),

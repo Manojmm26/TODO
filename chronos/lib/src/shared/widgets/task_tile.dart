@@ -9,12 +9,6 @@ import '../../application/sub_task_controller.dart';
 import '../../application/task_controller.dart';
 import '../../data/local/app_database.dart';
 
-double subTaskCompletionProgress(List<SubTask> subTasks) {
-  if (subTasks.isEmpty) return 0.0;
-  final completed = subTasks.where((s) => s.isCompleted).length;
-  return completed / subTasks.length;
-}
-
 class TaskTile extends ConsumerWidget {
   const TaskTile({
     super.key,
@@ -53,9 +47,7 @@ class TaskTile extends ConsumerWidget {
     }
     final allSubTasks = subTasksAsync.value!;
     final subTasks = allSubTasks.where((s) => s.taskId == task.id).toList();
-    final double progress = isCompleted
-        ? 1.0
-        : (subTasks.isNotEmpty ? subTaskCompletionProgress(subTasks) : 0.0);
+    final double progress = taskProgress(task, subTasks);
     final dueText = task.dueDate != null
         ? DateFormat(dueFormat).format(task.dueDate!)
         : 'No due date';

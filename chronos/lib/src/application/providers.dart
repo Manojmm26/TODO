@@ -4,12 +4,6 @@ import '../application/settings_controller.dart';
 import '../data/local/app_database.dart';
 import '../data/repositories/chronos_repositories.dart';
 
-final chronosDatabaseProvider = Provider<ChronosDatabase>((ref) {
-  final db = ChronosDatabase();
-  ref.onDispose(db.close);
-  return db;
-});
-
 final goalsStreamProvider = StreamProvider.autoDispose<List<Goal>>((ref) {
   final repository = ref.watch(goalRepositoryProvider);
   return repository.watchGoals();

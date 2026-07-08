@@ -21,6 +21,10 @@ class TaskController {
   final TaskRepository _tasks;
   final RecurrenceCoordinator _recurrence;
 
+  Future<void> updateTask(String id, TasksCompanion task) {
+    return _tasks.update(id, task);
+  }
+
   Future<void> completeTask(Task task) async {
     if (task.status >= taskStatusCompleted) return;
     final companion = TasksCompanion(

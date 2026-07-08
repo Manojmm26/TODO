@@ -22,7 +22,7 @@ class SubTaskController {
       _repository.toggleCompletion(id, isCompleted);
   Future<void> delete(String id) => _repository.delete(id);
   Future<void> rename(String id, String title) =>
-      _repository.upsert(SubTasksCompanion(id: Value(id), title: Value(title)));
+      _repository.updateTitle(id, title);
   Future<void> create({
     required String taskId,
     required String title,

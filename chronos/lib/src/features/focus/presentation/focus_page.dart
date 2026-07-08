@@ -127,9 +127,6 @@ class _FocusTimer extends ConsumerStatefulWidget {
 
 class _FocusTimerState extends ConsumerState<_FocusTimer> {
   String? _selectedTaskId;
-  bool pomodoroEnabled = false;
-  double workDuration = 25.0;
-  double breakDuration = 5.0;
   bool isBreakPhase = false;
   Timer? _ticker;
 
@@ -166,6 +163,11 @@ class _FocusTimerState extends ConsumerState<_FocusTimer> {
     final targetMinutes = sessionTargetMinutes(referenceSession);
     final controller = ref.read(focusSessionControllerProvider.notifier);
     final isProcessing = activeSessionState.isLoading;
+
+    final settings = ref.watch(settingsProvider);
+    final pomodoroEnabled = settings.pomodoroEnabled;
+    final workDuration = settings.workDuration;
+    final breakDuration = settings.breakDuration;
 
     if (sessionsAsync.isLoading && activeSessionState.isLoading) {
       return const Padding(
@@ -269,10 +271,11 @@ class _FocusTimerState extends ConsumerState<_FocusTimer> {
   }
 
   void _startNewSession(FocusSessionController controller) {
+    final settings = ref.read(settingsProvider);
     controller.startSession(
       taskId: _selectedTaskId,
-      targetMinutes: pomodoroEnabled
-          ? (isBreakPhase ? breakDuration.round() : workDuration.round())
+      targetMinutes: settings.pomodoroEnabled
+          ? (isBreakPhase ? settings.breakDuration.round() : settings.workDuration.round())
           : 30, // default
     );
   }
@@ -556,45 +559,39 @@ class _SessionHistoryTile extends StatelessWidget {
   }
 }
 
-class _AmbientOptions extends StatefulWidget {
+class _AmbientOptions extends ConsumerWidget {
   const _AmbientOptions();
 
   @override
-  State<_AmbientOptions> createState() => _AmbientOptionsState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+    final notifier = ref.read(settingsProvider.notifier);
 
-class _AmbientOptionsState extends State<_AmbientOptions> {
-  bool _ambientSounds = true;
-  String _selectedSound = 'Rain';
-  bool _notificationChimes = true;
-
-  @override
-  Widget build(BuildContext context) {
     return Column(
       children: [
         SwitchListTile.adaptive(
-          value: _ambientSounds,
-          onChanged: (value) => setState(() => _ambientSounds = value),
+          value: settings.ambientSounds,
+          onChanged: notifier.updateAmbientSounds,
           title: const Text('Ambient background sounds'),
           subtitle: const Text('Rain, cafe noise, or white noise presets'),
         ),
-        if (_ambientSounds)
+        if (settings.ambientSounds)
           DropdownButtonFormField<String>(
             isExpanded: true,
-            initialValue: _selectedSound,
+            initialValue: settings.selectedSound,
             items: const [
               DropdownMenuItem(value: 'Rain', child: Text('Rain')),
               DropdownMenuItem(value: 'Cafe', child: Text('Cafe murmurs')),
               DropdownMenuItem(value: 'Waves', child: Text('Ocean waves')),
             ],
             onChanged: (value) =>
-                setState(() => _selectedSound = value ?? _selectedSound),
+                notifier.updateSelectedSound(value ?? settings.selectedSound),
             decoration: const InputDecoration(labelText: 'Sound preset'),
           ),
         const SizedBox(height: 12),
         SwitchListTile.adaptive(
-          value: _notificationChimes,
-          onChanged: (value) => setState(() => _notificationChimes = value),
+          value: settings.notificationChimes,
+          onChanged: notifier.updateNotificationChimes,
           title: const Text('Focus session chimes'),
           subtitle: const Text('Play gentle alerts for breaks and resumes'),
         ),
@@ -644,44 +641,37 @@ class _StreakMetric extends StatelessWidget {
   }
 }
 
-class _PomodoroSettings extends StatefulWidget {
+class _PomodoroSettings extends ConsumerWidget {
   const _PomodoroSettings();
 
   @override
-  State<_PomodoroSettings> createState() => _PomodoroSettingsState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+    final notifier = ref.read(settingsProvider.notifier);
 
-class _PomodoroSettingsState extends State<_PomodoroSettings> {
-  bool pomodoroEnabled = false;
-  double workDuration = 25.0;
-  double breakDuration = 5.0;
-
-  @override
-  Widget build(BuildContext context) {
-    // final theme = Theme.of(context); // Unused
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SwitchListTile.adaptive(
-          value: pomodoroEnabled,
-          onChanged: (value) => setState(() => pomodoroEnabled = value),
+          value: settings.pomodoroEnabled,
+          onChanged: notifier.updatePomodoroEnabled,
           title: const Text('Enable Pomodoro mode'),
           subtitle: const Text('Alternate work and break timers'),
         ),
-        if (pomodoroEnabled) ...[
+        if (settings.pomodoroEnabled) ...[
           _DurationSlider(
             label: 'Work duration',
-            value: workDuration,
+            value: settings.workDuration,
             min: 5,
             max: 90,
-            onChanged: (value) => setState(() => workDuration = value),
+            onChanged: notifier.updateWorkDuration,
           ),
           _DurationSlider(
             label: 'Break duration',
-            value: breakDuration,
+            value: settings.breakDuration,
             min: 1,
             max: 30,
-            onChanged: (value) => setState(() => breakDuration = value),
+            onChanged: notifier.updateBreakDuration,
           ),
         ],
       ],

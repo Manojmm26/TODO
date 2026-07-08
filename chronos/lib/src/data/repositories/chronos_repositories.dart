@@ -65,6 +65,8 @@ class SubTaskRepository {
   Stream<List<SubTask>> watchSubTasks() => _dao.watchSubTasks();
   Future<List<SubTask>> forTask(String taskId) => _dao.subTasksForTask(taskId);
   Future<void> upsert(SubTasksCompanion subTask) => _dao.upsertSubTask(subTask);
+  Future<void> updateTitle(String id, String title) =>
+      _dao.updateSubTaskTitle(id, title);
   Future<void> delete(String id) => _dao.deleteSubTask(id).then((_) => null);
   Future<void> toggleCompletion(String id, bool isCompleted) =>
       _dao.toggleCompletion(id, isCompleted);

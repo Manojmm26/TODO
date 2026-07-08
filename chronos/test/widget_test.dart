@@ -18,11 +18,13 @@ void main() {
     tester.view.physicalSize = const Size(3200, 2200);
     addTearDown(tester.view.resetPhysicalSize);
     await tester.pumpWidget(const ProviderScope(child: ChronosApp()));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // Expand the sidebar
     await tester.tap(find.byIcon(Icons.arrow_forward_ios_rounded));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.textContaining('Chronos'), findsWidgets);
     expect(find.textContaining('Timeline'), findsWidgets);

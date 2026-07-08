@@ -44,9 +44,35 @@ class DailyDigestCard extends StatelessWidget {
 
     final tasks = tasksAsync.value ?? const [];
     final sessions = sessionsAsync.value ?? const [];
-    final completedTasks = tasks.where(isTaskCompleted).length;
+
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    
+    // Count tasks completed today
+    final completedTasksToday = tasks.where((t) {
+      return isTaskCompleted(t) && t.updatedAt.isAfter(todayStart);
+    }).length;
+
     final focusMinutesTodayValue = focusMinutesToday(sessions);
-    final weeklyProgressPercent = weeklyProgress(tasks) * 100;
+
+    // Calculate weekly progress scoped to this week (Monday to Sunday)
+    final startOfWeek = todayStart.subtract(Duration(days: now.weekday - 1));
+    final endOfWeek = startOfWeek.add(const Duration(days: 7));
+    final weeklyTasks = tasks.where((t) {
+      final due = t.dueDate;
+      if (due != null && due.isAfter(startOfWeek) && due.isBefore(endOfWeek)) {
+        return true;
+      }
+      if (isTaskCompleted(t) && t.updatedAt.isAfter(startOfWeek) && t.updatedAt.isBefore(endOfWeek)) {
+        return true;
+      }
+      return false;
+    }).toList();
+    final completedWeekly = weeklyTasks.where(isTaskCompleted).length;
+    final weeklyProgressPercent = weeklyTasks.isNotEmpty
+        ? (completedWeekly / weeklyTasks.length) * 100
+        : 0.0;
+
     final upcomingDeadlinesCount = upcomingDeadlines(tasks);
 
     return SectionCard(
@@ -57,7 +83,7 @@ class DailyDigestCard extends StatelessWidget {
           Expanded(
             child: _DigestMetric(
               label: 'Completed Tasks',
-              value: completedTasks.toString(),
+              value: completedTasksToday.toString(),
               trend: '$upcomingDeadlinesCount deadlines soon',
               icon: Icons.check_circle_rounded,
             ),
@@ -76,7 +102,7 @@ class DailyDigestCard extends StatelessWidget {
             child: _DigestMetric(
               label: 'Weekly Progress',
               value: '${weeklyProgressPercent.round()}%',
-              trend: '${tasks.length} tasks tracked',
+              trend: '${weeklyTasks.length} tasks this week',
               icon: Icons.flag_circle_rounded,
             ),
           ),

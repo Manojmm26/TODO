@@ -148,7 +148,7 @@ class TimelinePage extends ConsumerWidget {
                       child: DragTarget<Task>(
                         onWillAcceptWithDetails: (_) => true,
                         onAcceptWithDetails: (droppedTask) {
-                          final db = ref.read(chronosDatabaseProvider);
+                          final controller = ref.read(taskControllerProvider);
                           final now = DateTime.now();
                           DateTime? newDue;
                           TasksCompanion companion = TasksCompanion(
@@ -195,7 +195,7 @@ class TimelinePage extends ConsumerWidget {
                               );
                               break;
                           }
-                          db.taskDao.updateTask(droppedTask.data.id, companion);
+                          controller.updateTask(droppedTask.data.id, companion);
                         },
                         builder: (context, candidateData, rejectedData) {
                           final isDraggingOver = candidateData.isNotEmpty;
@@ -302,7 +302,9 @@ class _TimelineRow extends ConsumerWidget {
     final dueText = task.dueDate != null
         ? DateFormat('EEE · h:mm a').format(task.dueDate!)
         : 'No due date';
-    final progress = taskProgress(task);
+    final subTasksAsync = ref.watch(subTasksStreamProvider);
+    final subTasks = subTasksAsync.value?.where((s) => s.taskId == task.id).toList();
+    final progress = taskProgress(task, subTasks);
     final priority = priorityFromInt(task.priority);
     final taskController = ref.read(taskControllerProvider);
     final isCompleted = task.status >= taskStatusCompleted;

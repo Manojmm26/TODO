@@ -39,17 +39,16 @@ TimelineBucket bucketForTask(Task task) {
   return TimelineBucket.backlog;
 }
 
-double taskProgress(Task task) {
+double taskProgress(Task task, [List<SubTask>? subTasks]) {
+  if (task.status >= taskStatusCompleted) return 1.0;
+  if (subTasks != null && subTasks.isNotEmpty) {
+    final completed = subTasks.where((subTask) => subTask.isCompleted).length;
+    return completed / subTasks.length;
+  }
   final est = task.estimatedMinutes <= 0 ? 60 : task.estimatedMinutes;
   final actual = task.actualMinutes;
   final value = actual / est;
   return value.clamp(0.0, 1.0);
-}
-
-double subTaskCompletionProgress(List<SubTask> subTasks) {
-  if (subTasks.isEmpty) return 0;
-  final completed = subTasks.where((subTask) => subTask.isCompleted).length;
-  return completed / subTasks.length;
 }
 
 TaskPriority priorityFromInt(int value) {

@@ -44,14 +44,41 @@ class RecurrenceCoordinator {
         return;
       }
 
-      // Use completion time (now) instead of task's due date to ensure
-      // the next occurrence respects the recurrence interval
-      // (e.g., daily = tomorrow, weekly = next week)
-      await _createOccurrence(template, after: DateTime.now());
+      // Use task's due date instead of completion time to ensure
+      // early completions don't generate duplicate occurrences for the same period.
+      await _createOccurrence(template, after: task.dueDate ?? DateTime.now());
     } catch (e, st) {
       debugPrint('🔴 Error handling task completion for ${task.id}: $e\n$st');
       rethrow;
     }
+  }
+
+  DateTime? _getNextOccurrence(Task template, DateTime pivot) {
+    final ruleString = template.recurrenceRule;
+    if (ruleString == null || ruleString.isEmpty) return null;
+
+    String normalizedRule = ruleString.trim();
+    if (!normalizedRule.startsWith('RRULE:')) {
+      normalizedRule = 'RRULE:$normalizedRule';
+    }
+
+    try {
+      final rule = RecurrenceRule.fromString(normalizedRule);
+      final templateStart = (template.startDate ?? template.dueDate ?? DateTime.now()).toUtc();
+      final iterator = rule
+          .getInstances(
+            start: templateStart,
+            after: pivot.toUtc(),
+            includeAfter: false,
+          )
+          .iterator;
+      if (iterator.moveNext()) {
+        return iterator.current.toLocal();
+      }
+    } catch (e) {
+      debugPrint('Error parsing RRULE in _getNextOccurrence: $e');
+    }
+    return null;
   }
 
   Future<void> ensureUpcomingOccurrence(Task template) async {
@@ -63,59 +90,50 @@ class RecurrenceCoordinator {
     final series = await _tasks.seriesForTemplate(template.id);
     debugPrint('Found ${series.length} existing items in series');
 
-    // Check for open tasks that are expired (due before today)
-    // and remove them per user request ("if i don't complete it should be removed")
+    final occurrences = series.where((t) => t.id != template.id).toList();
+
+    if (occurrences.isEmpty) {
+      // Brand new template: create first occurrence immediately
+      debugPrint('Brand new template detected. Forcing immediate creation.');
+      final pivot = template.startDate ?? template.dueDate ?? DateTime.now();
+      await _createOccurrence(template, after: pivot, includeAfter: true);
+      return;
+    }
+
     final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    bool didExpire = false;
+    var latestOccurrence = occurrences.first;
+    var latestDue = latestOccurrence.dueDate;
+    if (latestDue == null) return;
 
-    // Use a secondary list to avoid concurrent modification if we were iterating and deleting
-    // but here we just iterate first.
-    final openTasks = series
-        .where((t) => t.parentRecurringId != null && t.status < 2)
-        .toList();
-
-    for (final task in openTasks) {
-      if (task.dueDate != null && task.dueDate!.isBefore(todayStart)) {
-        await _tasks.delete(task.id);
-        didExpire = true;
-      } else {
-        // We have a valid future/today task, so we don't need to generate a new one.
-        debugPrint(
-          'Valid future task exists: ${task.title} due ${task.dueDate}',
-        );
-        return;
+    // Catch up loop: if the latest occurrence is uncompleted but expired (past its next occurrence date),
+    // delete it and generate the next one until we reach the current active period.
+    while (latestOccurrence.status < 2) {
+      final nextDue = _getNextOccurrence(template, latestOccurrence.dueDate!);
+      if (nextDue == null || now.isBefore(nextDue)) {
+        // Either there are no future occurrences or the next occurrence is in the future.
+        // We keep the current active occurrence.
+        break;
       }
+
+      debugPrint('Rolling over expired occurrence ${latestOccurrence.id} due ${latestOccurrence.dueDate}');
+      await _tasks.delete(latestOccurrence.id);
+
+      // Create the next occurrence
+      await _createOccurrence(template, after: latestOccurrence.dueDate!, includeAfter: false);
+
+      // Reload occurrences to get the newly created one
+      final updatedSeries = await _tasks.seriesForTemplate(template.id);
+      final updatedOccurrences = updatedSeries.where((t) => t.id != template.id).toList();
+      if (updatedOccurrences.isEmpty) return;
+
+      latestOccurrence = updatedOccurrences.first;
+      latestDue = latestOccurrence.dueDate;
     }
 
-    DateTime pivotDate;
-    bool includeAfter = false;
-
-    if (didExpire) {
-      // If we expired old tasks, we want to catch up to "Today".
-      // Using yesterday allows 'next' to be 'Today' (if daily) or next valid occurrence.
-      pivotDate = now.subtract(const Duration(days: 1));
-      includeAfter = false;
-    } else {
-      final latestDue = _latestDueDate(series);
-      if (latestDue == null) {
-        // Brand new template: We want the first instance immediately.
-        // Even if start date is today.
-        debugPrint('Brand new template detected. Forcing immediate creation.');
-        pivotDate = template.startDate ?? template.dueDate ?? now;
-        includeAfter = true;
-      } else {
-        // Standard continuation
-        pivotDate = latestDue;
-        includeAfter = false;
-      }
+    // If the latest occurrence is completed, generate the next one (which will be in the future or active now)
+    if (latestOccurrence.status >= 2) {
+      await _createOccurrence(template, after: latestDue!, includeAfter: false);
     }
-
-    await _createOccurrence(
-      template,
-      after: pivotDate,
-      includeAfter: includeAfter,
-    );
   }
 
   Future<void> _createOccurrence(
@@ -171,8 +189,9 @@ class RecurrenceCoordinator {
       // Exclude values that are the template itself!
       final series = await _tasks.seriesForTemplate(template.id);
       final isDuplicate = series.any((t) {
-        if (t.id == template.id)
+        if (t.id == template.id) {
           return false; // Don't check the template against itself
+        }
         // Simple check: Same Due Date to the minute?
         // Let's use isAtSameMomentAs or checking difference < 1 min
         if (t.dueDate == null) return false;
@@ -222,17 +241,5 @@ class RecurrenceCoordinator {
       debugPrint('Error creating occurrence for ${template.id}: $e\n$st');
       rethrow;
     }
-  }
-
-  DateTime? _latestDueDate(List<Task> tasks) {
-    DateTime? latest;
-    for (final task in tasks) {
-      final due = task.dueDate;
-      if (due == null) continue;
-      if (latest == null || due.isAfter(latest)) {
-        latest = due;
-      }
-    }
-    return latest;
   }
 }

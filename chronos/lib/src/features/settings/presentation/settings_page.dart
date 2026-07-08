@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:chronos/src/core/theme/app_theme.dart';
 
 import 'widgets/custom_color_picker.dart';
@@ -306,6 +308,32 @@ class _SystemSettings extends ConsumerStatefulWidget {
 }
 
 class _SystemSettingsState extends ConsumerState<_SystemSettings> {
+  String _dbPath = 'Loading path...';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDbPath();
+  }
+
+  Future<void> _loadDbPath() async {
+    try {
+      final supportDir = await getApplicationSupportDirectory();
+      final path = p.join(supportDir.path, 'chronos.sqlite');
+      if (mounted) {
+        setState(() {
+          _dbPath = path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _dbPath = 'Error retrieving path';
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
@@ -328,9 +356,11 @@ class _SystemSettingsState extends ConsumerState<_SystemSettings> {
         ),
         const SizedBox(height: 12),
         TextField(
+          controller: TextEditingController(text: _dbPath),
+          readOnly: true,
           decoration: const InputDecoration(
             labelText: 'Data directory',
-            helperText: 'SQLite/Drift storage location',
+            helperText: 'SQLite/Drift storage location (Read-only)',
             prefixIcon: Icon(Icons.folder_rounded),
           ),
         ),

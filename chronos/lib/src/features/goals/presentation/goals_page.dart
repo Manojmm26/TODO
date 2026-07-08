@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:chronos/src/features/dashboard/presentation/dashboard_metrics.dart';
 import 'package:chronos/src/shared/widgets/task_tile.dart';
@@ -7,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../application/goal_controller.dart';
 import '../../../application/providers.dart';
 import '../../../application/quick_add_controller.dart';
 import '../../../core/theme/app_theme.dart';
@@ -260,7 +260,7 @@ class _GoalProgressTile extends ConsumerWidget {
                   onChanged: (value) {
                     if (value == null) return;
                     ref
-                        .read(quickAddControllerProvider)
+                        .read(goalControllerProvider)
                         .toggleGoalCompletion(goal.id, value);
                   },
                   shape: const CircleBorder(),

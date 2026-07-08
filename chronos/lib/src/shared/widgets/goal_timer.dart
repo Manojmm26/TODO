@@ -3,8 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../application/quick_add_controller.dart';
+import '../../application/goal_controller.dart';
 import '../../data/local/app_database.dart';
+
 
 String _formatSeconds(int totalSeconds) {
   final hours = totalSeconds ~/ 3600;
@@ -112,7 +113,7 @@ class _GoalTimerState extends ConsumerState<GoalTimer> {
             padding: EdgeInsets.zero,
             iconSize: 20,
             onPressed: () {
-              final controller = ref.read(quickAddControllerProvider);
+              final controller = ref.read(goalControllerProvider);
               if (isRunning) {
                 controller.stopGoalTimer(widget.goal.id);
               } else {

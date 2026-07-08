@@ -20,6 +20,12 @@ class SubTaskDao extends DatabaseAccessor<ChronosDatabase> with _$SubTaskDaoMixi
   Future<int> deleteSubTask(String id) =>
       (delete(subTasks)..where((tbl) => tbl.id.equals(id))).go();
 
+  Future<void> updateSubTaskTitle(String id, String title) {
+    return (update(subTasks)..where((tbl) => tbl.id.equals(id))).write(
+      SubTasksCompanion(title: Value(title)),
+    );
+  }
+
   Future<void> toggleCompletion(String id, bool isCompleted) {
     return (update(subTasks)..where((tbl) => tbl.id.equals(id))).write(
       SubTasksCompanion(isCompleted: Value(isCompleted)),
